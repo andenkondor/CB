@@ -1,5 +1,7 @@
 import { BrowserModule } from '@angular/platform-browser';
+import {FormsModule} from '@angular/forms';
 import { NgModule } from '@angular/core';
+import { LexerService} from './services/lexer.service';
 
 
 import { AppComponent } from './app.component';
@@ -10,9 +12,10 @@ import { AppComponent } from './app.component';
     AppComponent
   ],
   imports: [
-    BrowserModule
+    BrowserModule,
+    FormsModule
   ],
-  providers: [],
+  providers: [LexerService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

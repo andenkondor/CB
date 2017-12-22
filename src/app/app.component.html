@@ -1,20 +1,35 @@
-<!--The content below is only a placeholder and can be replaced.-->
-<div style="text-align:center">
-  <h1>
-    Welcome to {{ title }}!
-  </h1>
-  <img width="300" alt="Angular Logo" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTAgMjUwIj4KICAgIDxwYXRoIGZpbGw9IiNERDAwMzEiIGQ9Ik0xMjUgMzBMMzEuOSA2My4ybDE0LjIgMTIzLjFMMTI1IDIzMGw3OC45LTQzLjcgMTQuMi0xMjMuMXoiIC8+CiAgICA8cGF0aCBmaWxsPSIjQzMwMDJGIiBkPSJNMTI1IDMwdjIyLjItLjFWMjMwbDc4LjktNDMuNyAxNC4yLTEyMy4xTDEyNSAzMHoiIC8+CiAgICA8cGF0aCAgZmlsbD0iI0ZGRkZGRiIgZD0iTTEyNSA1Mi4xTDY2LjggMTgyLjZoMjEuN2wxMS43LTI5LjJoNDkuNGwxMS43IDI5LjJIMTgzTDEyNSA1Mi4xem0xNyA4My4zaC0zNGwxNy00MC45IDE3IDQwLjl6IiAvPgogIDwvc3ZnPg==">
-</div>
-<h2>Here are some links to help you start: </h2>
-<ul>
-  <li>
-    <h2><a target="_blank" rel="noopener" href="https://angular.io/tutorial">Tour of Heroes</a></h2>
-  </li>
-  <li>
-    <h2><a target="_blank" rel="noopener" href="https://github.com/angular/angular-cli/wiki">CLI Documentation</a></h2>
-  </li>
-  <li>
-    <h2><a target="_blank" rel="noopener" href="https://blog.angular.io/">Angular blog</a></h2>
-  </li>
-</ul>
+<nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+  <a class="navbar-brand" href="#">Google Protocol Buffer to JSON</a>
 
+  <div class="collapse navbar-collapse" id="navbarsExampleDefault">
+    <ul class="navbar-nav mr-auto">
+      <li class="nav-item active spacewidth">
+        <button class="btn btn-outline-success my-2 my-sm-0" (click)="convert()" [disabled]="convertDisabled()">Convert</button>
+      </li>
+      <li class="nav-item active">
+        <button class="btn btn-outline-danger my-2 my-sm-0" (click)="resetInputs()">Reset</button>
+      </li>
+    </ul>
+  </div>
+</nav>
+
+<main role="main" class="container spaceheight">
+
+  <div class="starter-template">
+    <div class="container">
+      <div class="row">
+        <div class="col form-group">
+            <label for="sourceTextArea">YAML</label>
+            <textarea class="form-control" id="sourceTextArea" rows="15"  placeholder="Enter source code here ..." [(ngModel)]="srcText"></textarea>
+        </div>
+        <div class="col form-group">
+          <label for="targetTextArea">JSON</label>
+          <textarea class="form-control" id="targetTextArea" rows="15" readonly [(ngModel)]="targetText"></textarea>
+      </div>
+      </div>
+      <div class="row form-group">
+          <label for="consoleTextArea">Console</label>
+          <textarea class="form-control" id="consoleTextArea" rows="3" readonly [(ngModel)]="consoleText"></textarea>
+      </div>
+    </div>
+  </div>
