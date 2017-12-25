@@ -1,13 +1,32 @@
 <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
-  <a class="navbar-brand" href="#">Google Protocol Buffer to JSON</a>
+  <a class="navbar-brand" href="#">Google Protocol Buffer v3 to JSON</a>
 
   <div class="collapse navbar-collapse" id="navbarsExampleDefault">
     <ul class="navbar-nav mr-auto">
       <li class="nav-item active spacewidth">
         <button class="btn btn-outline-success my-2 my-sm-0" (click)="convert()" [disabled]="convertDisabled()">Convert</button>
       </li>
-      <li class="nav-item active">
+      <li class="nav-item active spacewidth">
         <button class="btn btn-outline-danger my-2 my-sm-0" (click)="resetInputs()">Reset</button>
+      </li>
+      <li class="nav-item dropdown dd">
+        <button class="btn btn-outline-warning dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Options
+        </button>
+        <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+          <div class="form-check">
+            <label class="form-check-label cb">
+              <input class="form-check-input" type="checkbox" [(ngModel)]="showTokens">
+              Log Tokens
+            </label>
+          </div>
+          <div class="form-check">
+            <label class="form-check-label cb">
+              <input class="form-check-input" type="checkbox" [(ngModel)]="tokenAutoFix">
+              Fix Tokens
+            </label>
+          </div>
+        </div>
       </li>
     </ul>
   </div>
@@ -19,17 +38,17 @@
     <div class="container">
       <div class="row">
         <div class="col form-group">
-            <label for="sourceTextArea">YAML</label>
-            <textarea class="form-control" id="sourceTextArea" rows="15"  placeholder="Enter source code here ..." [(ngModel)]="srcText"></textarea>
+          <label for="sourceTextArea">Protobuf v3</label>
+          <textarea class="form-control scrolling" id="sourceTextArea" rows="15" placeholder="Enter source code here ..." [(ngModel)]="srcText"></textarea>
         </div>
         <div class="col form-group">
           <label for="targetTextArea">JSON</label>
-          <textarea class="form-control" id="targetTextArea" rows="15" readonly [(ngModel)]="targetText"></textarea>
-      </div>
+          <textarea class="form-control scrolling" id="targetTextArea" rows="15" readonly [(ngModel)]="targetText"></textarea>
+        </div>
       </div>
       <div class="row form-group">
-          <label for="consoleTextArea">Console</label>
-          <textarea class="form-control" id="consoleTextArea" rows="3" readonly [(ngModel)]="consoleText"></textarea>
+        <label for="consoleTextArea">Console</label>
+        <textarea class="form-control scrolling" id="consoleTextArea" rows=15 rows="3" readonly [(ngModel)]="consoleText"></textarea>
       </div>
     </div>
   </div>

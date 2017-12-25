@@ -4,6 +4,9 @@ export class LexerService {
 
 
     src: string = "";
+    initialSrc: string = "";
+    tokens = [];
+    tokenAutoFix;
 
     fragLetter: string = "[A-Za-z_]";
     fragDecimalDigit: string = "[0-9]";
@@ -14,10 +17,10 @@ export class LexerService {
     fragHexLiteral: string = "0(x|X)" + this.fragHexDigit + "*";
     fragDecimals: string = this.fragDecimalDigit + "+";
     fragExponent: string = "(e|E)(\\+|-)?" + this.fragDecimals;
-    fragHexEscape = "\\(x|X)" + this.fragHexDigit + this.fragHexDigit;
-    fragOctalEscape = "\\" + this.fragOctalDigit + this.fragOctalDigit + this.fragOctalDigit;
-    fragCharEscape = "\\[abfnrtv\\'\"]";
-    fragCharValue = this.fragHexEscape + "|" + this.fragOctalEscape + "|" + this.fragCharEscape + "|[^\0\n\\]";
+    fragHexEscape = "\\\\(x|X)" + this.fragHexDigit + "{2}"
+    fragOctalEscape = "\\\\" + this.fragOctalDigit + "{3}";
+    fragCharEscape = "\\\\[abfnrtv\\'\"]";
+    fragCharValue = this.fragHexEscape + "|" + this.fragOctalEscape + "|" + this.fragCharEscape + "|[^\0\n\\\\]";
 
 
 
@@ -42,6 +45,7 @@ export class LexerService {
         PROTO3_SINGLE: "'proto3'",
         PUBLIC: "public",
         REPEATED: "repeated",
+        REQUIRED: "required",
         RESERVED: "reserved",
         RETURNS: "returns",
         RPC: "rpc",
@@ -60,45 +64,83 @@ export class LexerService {
         WEAK: "weak",
 
         Identifier: this.fragLetter + "(" + this.fragLetter + "|" + this.fragDecimalDigit + ")*",
-        IntegerLiteral: this.fragDecimalLiteral + "|" + this.fragOctalLiteral + "|" + this.fragHexLiteral,
-        FloatLiteral: "(" + this.fragDecimals + "\\." + this.fragDecimals + "?" + this.fragExponent + "?|" + this.fragDecimals + this.fragExponent + "|\\." + this.fragDecimals + "?)|inf|nan",
+        IntegerLiteral: "(" + this.fragDecimalLiteral + ")|(" + this.fragOctalLiteral + ")|(" + this.fragHexLiteral + ")",
+        FloatLiteral: "(" + this.fragDecimals + "\\.(" + this.fragDecimals + ")?" + this.fragExponent + "?|" + this.fragDecimals + this.fragExponent + "|\\." + this.fragDecimals + "?)|inf|nan",
         StringLiteral: "'" + this.fragCharValue + "*'|\"" + this.fragCharValue + "*\"",
         Quote: "'|\"",
 
-        LPAREN: "(",
-        RPAREN: ")",
-        LBRACE: "{",
-        RBRACE: "}",
-        LBRACK: "[",
-        RBRACK: "]",
+        LPAREN: "\\(",
+        RPAREN: "\\)",
+        LBRACE: "\\{",
+        RBRACE: "\\}",
+        LBRACK: "\\[",
+        RBRACK: "\\]",
         LCHEVR: "<",
         RCHEVR: ">",
-        SEMI: ",",
+        SEMI: ";",
         COMMA: ",",
-        DOT: ".",
+        DOT: "\\.",
         MINUS: "-",
-        PLUS: "+",
+        PLUS: "\\+",
         ASSIGN: "=",
-        WHITESPACE: "\s+",
-        COMMENT: "\/\*.*?\*\/",
-        LINECOMMENT: "\/\/[^\r\n]"
+
+        wHITESPACE: "\\s+",
+        cOMMENT: "\\/\\*.*?\\*\\/",
+        lINECOMMENT: "\\/\\/[^\\r\\n]"
     }
 
 
     constructor() {
-    } 
-
-    initialize(src){
-        this.src = src;
     }
 
-    getTokens(){
-        var tokens:Token[];
-        do{
+    reset(){
+
+    }
+    initialize(src,tokenAutoFix) {
+        this.tokenAutoFix = tokenAutoFix;        
+        this.src = src;
+        this.initialSrc = src;
+        this.tokens = [];
+    }
+
+    getTokens() {
+        do {
             var token = this.getNextToken()
-            tokens.push(token);
-        }while(token != null);
-        return tokens;
+            this.filterToken(token);
+        } while (token.name != "EOF");
+        this.tokens.pop();
+
+        var result = [];
+        result.push(this.tokens);
+
+        if (this.src === "") {
+            result.push("success");
+        } else {
+            result.push("failure");
+            result.push(this.src);
+            var errorLine = 0;
+            var errorIndex = 0;
+            var initialLines = this.initialSrc.split("\n");
+            var remainingLines = this.src.split("\n");
+            initialLines.forEach(function(line,number){
+                if(line.indexOf(remainingLines[0]) != -1){
+                    errorLine = number+1;
+                    errorIndex = line.indexOf(remainingLines[0])+1;
+                    return;
+                }
+            })
+            result.push(errorLine);
+            result.push(errorIndex);
+        }
+
+        return result;
+    }
+
+    filterToken(token) {
+        if (!(token.name[0] === token.name[0].toLowerCase() &&
+            token.name[token.name.length - 1] === token.name[token.name.length - 1].toUpperCase())) {
+            this.tokens.push(token);
+        }
     }
     getNextToken() {
 
@@ -106,26 +148,35 @@ export class LexerService {
         var name = "";
         var value = "";
         for (var i in this.lexerGrammar) {
-            var result = "/^" + this.src.match(this.lexerGrammar[i])
-            if (result[0] != "") {
+            var regex = new RegExp("^" + this.lexerGrammar[i]);
+            var result = this.src.match(regex);
+            if (result) {
                 if (result[0].length > longest) {
                     longest = result[0].length;
-                    name = result[0];
+                    name = i;
                     value = result[0];
                 }
             }
         }
+        var next = new Token("", "");
         if (longest > 0) {
-            var next: Token;
             next.name = name;
             if (name === name.toUpperCase()) {
-                next.value = result[0];
-            } else {
                 next.value = "";
+            } else {
+                next.value = value;
             }
-            this.src.replace(value, "");
+            this.src = this.src.replace(value, "");
+            return next;
         } else {
-            return null;
+            if (this.tokenAutoFix && this.src.length > 0) {
+                this.src = this.src.replace(this.src[0], "");
+                next.name = "placebO";
+                return next;
+            } else {
+                next.name = "EOF";
+                return next;
+            }
         }
     }
 

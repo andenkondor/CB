@@ -11,4 +11,14 @@ body {
   .spaceheight{
       margin-top: 7%;
   }
-
+  .scrolling{
+    overflow-y: scroll;
+    height: 400px;
+    resize: none;
+  }
+  .dd{
+    width: 200px;
+  }
+  .cb{
+    margin-left: 10px;
+  }
