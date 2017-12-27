@@ -20,7 +20,7 @@ export class LexerService {
     fragHexEscape = "\\\\(x|X)" + this.fragHexDigit + "{2}"
     fragOctalEscape = "\\\\" + this.fragOctalDigit + "{3}";
     fragCharEscape = "\\\\[abfnrtv\\'\"]";
-    fragCharValue = this.fragHexEscape + "|" + this.fragOctalEscape + "|" + this.fragCharEscape + "|[^\0\n\\\\]";
+    fragCharValue = "("+this.fragHexEscape + "|" + this.fragOctalEscape + "|" + this.fragCharEscape + "|[^\\0\\n\\\\])";
 
 
 
@@ -63,11 +63,11 @@ export class LexerService {
         UINT64: "uint64",
         WEAK: "weak",
 
-        Identifier: this.fragLetter + "(" + this.fragLetter + "|" + this.fragDecimalDigit + ")*",
+        Identifier: "("+this.fragLetter + "(" + this.fragLetter + "|" + this.fragDecimalDigit + ")*)",
         IntegerLiteral: "(" + this.fragDecimalLiteral + ")|(" + this.fragOctalLiteral + ")|(" + this.fragHexLiteral + ")",
-        FloatLiteral: "(" + this.fragDecimals + "\\.(" + this.fragDecimals + ")?" + this.fragExponent + "?|" + this.fragDecimals + this.fragExponent + "|\\." + this.fragDecimals + "?)|inf|nan",
-        StringLiteral: "'" + this.fragCharValue + "*'|\"" + this.fragCharValue + "*\"",
-        Quote: "'|\"",
+        FloatLiteral: "((" + this.fragDecimals + "\\.(" + this.fragDecimals + ")?" + this.fragExponent + "?|" + this.fragDecimals + this.fragExponent + "|\\." + this.fragDecimals + "?)|inf|nan)",
+        StringLiteral: "(('" + this.fragCharValue + "*')|(\"" + this.fragCharValue + "*\"))",
+        Quote: "('|\")",
 
         LPAREN: "\\(",
         RPAREN: "\\)",
@@ -108,7 +108,7 @@ export class LexerService {
             var token = this.getNextToken()
             this.filterToken(token);
         } while (token.name != "EOF");
-        this.tokens.pop();
+        //this.tokens.pop();
 
         var result = [];
         result.push(this.tokens);

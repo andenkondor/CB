@@ -5,6 +5,7 @@ import { LexerService} from './services/lexer.service';
 
 
 import { AppComponent } from './app.component';
+import { ParserService } from './services/parser.service';
 
 
 @NgModule({
@@ -15,7 +16,7 @@ import { AppComponent } from './app.component';
     BrowserModule,
     FormsModule
   ],
-  providers: [LexerService],
+  providers: [LexerService, ParserService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
