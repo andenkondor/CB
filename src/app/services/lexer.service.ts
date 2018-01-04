@@ -58,13 +58,13 @@ export class LexerService {
         STRING: "string",
         SYNTAX: "syntax",
         TO: "to",
-        true: "true",
+        TRUE: "true",
         UINT32: "uint32",
         UINT64: "uint64",
         WEAK: "weak",
 
         Identifier: "("+this.fragLetter + "(" + this.fragLetter + "|" + this.fragDecimalDigit + ")*)",
-        IntegerLiteral: "(" + this.fragDecimalLiteral + ")|(" + this.fragOctalLiteral + ")|(" + this.fragHexLiteral + ")",
+        IntegerLiteral: "((" + this.fragDecimalLiteral + ")|(" + this.fragOctalLiteral + ")|(" + this.fragHexLiteral + "))",
         FloatLiteral: "((" + this.fragDecimals + "\\.(" + this.fragDecimals + ")?" + this.fragExponent + "?|" + this.fragDecimals + this.fragExponent + "|\\." + this.fragDecimals + "?)|inf|nan)",
         StringLiteral: "(('" + this.fragCharValue + "*')|(\"" + this.fragCharValue + "*\"))",
         Quote: "('|\")",
@@ -84,9 +84,9 @@ export class LexerService {
         PLUS: "\\+",
         ASSIGN: "=",
 
-        wHITESPACE: "\\s+",
-        cOMMENT: "\\/\\*.*?\\*\\/",
-        lINECOMMENT: "\\/\\/[^\\r\\n]"
+        wHITESPACE: "(\\s+)",
+        cOMMENT: "(\\/\\*.*?\\*\\/)",
+        lINECOMMENT: "(\\/\\/[^\\r\\n]*)"
     }
 
 

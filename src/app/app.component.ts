@@ -47,7 +47,9 @@ export class AppComponent {
     this.targetText = "";
     var startTime = new Date();
     var tokens = this.lexing(startTime);
+    console.log(tokens);
     var tree = this.parsing(startTime, tokens);
+    console.log("tree");
 
 
   }
