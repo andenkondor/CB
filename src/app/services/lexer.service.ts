@@ -7,6 +7,8 @@ export class LexerService {
     initialSrc: string = "";
     tokens = [];
     tokenAutoFix;
+    currentLine = 1;
+    currentIndex = 1;
 
     fragLetter: string = "[A-Za-z_]";
     fragDecimalDigit: string = "[0-9]";
@@ -36,6 +38,7 @@ export class LexerService {
         IMPORT: "import",
         INT32: "int32",
         INT64: "int64",
+        MAX: "max",
         MAP: "map",
         MESSAGE: "message",
         ONEOF: "oneof",
@@ -84,7 +87,8 @@ export class LexerService {
         PLUS: "\\+",
         ASSIGN: "=",
 
-        wHITESPACE: "(\\s+)",
+        nEWLINE: "(\\n)",
+        wHITESPACE: "(\\s)",
         cOMMENT: "(\\/\\*.*?\\*\\/)",
         lINECOMMENT: "(\\/\\/[^\\r\\n]*)"
     }
@@ -101,6 +105,8 @@ export class LexerService {
         this.src = src;
         this.initialSrc = src;
         this.tokens = [];
+        this.currentIndex = 1;
+        this.currentLine = 1;
     }
 
     getTokens() {
@@ -109,7 +115,9 @@ export class LexerService {
             this.filterToken(token);
         } while (token.name != "EOF");
         //this.tokens.pop();
-
+        this.tokens[this.tokens.length-1].line = this.currentLine;
+        this.tokens[this.tokens.length-1].index = 1;
+        
         var result = [];
         result.push(this.tokens);
 
@@ -126,6 +134,7 @@ export class LexerService {
                 if(line.indexOf(remainingLines[0]) != -1){
                     errorLine = number+1;
                     errorIndex = line.indexOf(remainingLines[0])+1;
+                    result[2] = line.substr(0, errorIndex-1) + "[ERROR->]" + line.substr(errorIndex-1);
                     return;
                 }
             })
@@ -140,6 +149,11 @@ export class LexerService {
         if (!(token.name[0] === token.name[0].toLowerCase() &&
             token.name[token.name.length - 1] === token.name[token.name.length - 1].toUpperCase())) {
             this.tokens.push(token);
+        }else{
+            if(token.name === "nEWLINE"){
+                this.currentLine++;
+                this.currentIndex = 1;
+            }
         }
     }
     getNextToken() {
@@ -161,6 +175,9 @@ export class LexerService {
         var next = new Token("", "");
         if (longest > 0) {
             next.name = name;
+            next.line = this.currentLine;
+            next.index = this.currentIndex;
+            this.currentIndex += value.length;
             if (name === name.toUpperCase()) {
                 next.value = "";
             } else {

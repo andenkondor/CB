@@ -7,6 +7,8 @@ export class ParserService {
     ringbuffer = [];
     position = 0;
     lookahead;
+    lastErrorInformation = [];
+    tokenSizeHistory;
 
     initialize(tokens, lookahead) {
         this.ringbuffer = [];
@@ -15,19 +17,18 @@ export class ParserService {
         this.position = 0;
 
         if (this.tokens.length < 1) {
-            throw { name: "NoTokensError", message: "No Tokens for Parsing supplied" };
+            throw { name: "NoTokensLeftError", message: "No Tokens for Parsing supplied" };
         }
         for (var i = 0; i < this.lookahead; i++) {
             if (this.tokensLeft()) {
                 this.ringbuffer.push(this.tokens[0]);
                 this.tokens.shift();
-                console.log("oi");
             }
         }
 
+        this.tokenSizeHistory = this.tokens.length;
         this.lookahead = this.ringbuffer.length;
 
-        console.log("RB" + this.ringbuffer);
     }
 
     consume() {
@@ -45,7 +46,8 @@ export class ParserService {
                 }
                 this.lookahead--;
             } else if (this.ringbuffer.length == 0) {
-                throw { name: "NoTokensLeftError", message: "No more Tokens to consume" };
+                var emptyToken: Token = new Token("NULL", "");
+                return emptyToken;
 
             }
         }
@@ -57,23 +59,32 @@ export class ParserService {
         if (this.lookaheadLeft()) {
             return this.ringbuffer[(this.position + lookahead - 1) % this.lookahead];
         } else {
-            throw { name: "NoTokensLeftError", message: "No more Tokens to read" };
+            var emptyToken: Token = new Token("NULL", "");
+            return emptyToken;
         }
 
     }
 
     match(tokenName, node: ASTNode) {
-        console.log(this.ringbuffer);
-        console.log(this.tokens);
         console.log("hab ich " + this.getLookaheadToken(1).name + ". muss ich: " + tokenName);
         if (this.getLookaheadToken(1).name === tokenName) {
 
             var tokenNode: ASTNode = new ASTNode("", tokenName);
             tokenNode.value = this.getLookaheadToken(1).value;
-            console.log(tokenNode.value);
+            tokenNode.line = this.getLookaheadToken(1).line;
+            tokenNode.index = this.getLookaheadToken(1).index;
+            if (tokenNode.value != "") {
+                console.log("val:" + tokenNode.value);
+            }
             node.addChild(tokenNode);
             this.consume();
         } else {
+            if (this.tokens.length <= this.tokenSizeHistory) {
+                this.tokenSizeHistory = this.tokens.length;
+                this.lastErrorInformation = [];
+                this.lastErrorInformation.push(tokenName) //[0] Muss ich
+                this.lastErrorInformation.push(this.getLookaheadToken(1)) //[1] Hab ich
+            }
             throw { name: "NoTokenMatchError", message: "Token found " + this.getLookaheadToken(1).name + ". Token needed: " + tokenName };
 
         }
@@ -99,16 +110,13 @@ export class ParserService {
         } catch (e) {
             console.log(e.name + ": " + e.message);
             if (e.name === "NoTokenMatchError") {
-                result[1] = "failure";
-            } else if (e.name === "NoTokensLeftError") {
-                result[1] = "failure";
-            } else if (e.name === "NoTokensError") {
-                result[1] = "failure";
+                result.push("failure");
+                result.push("match");
+                result.push(this.lastErrorInformation)
             } else {
                 throw e;
             }
         }
-        console.log("res:" + result);
         return result;
     }
 
@@ -361,7 +369,6 @@ export class ParserService {
 
         var nextToken = this.getLookaheadToken(1);
         if (nextToken.name === "MESSAGE") {
-            console.log("RICHTIG");
             this.message(toplevelNode);
         } else if (nextToken.name === "ENUM") {
             this.enumDefinition(toplevelNode);
@@ -391,7 +398,6 @@ export class ParserService {
         var nextNextToken = this.getLookaheadToken(1);
 
         while (true) {
-            console.log("2");
             if (nextToken.name === "DOT" && nextToken.name === "Identifier") {
                 this.match("DOT", fullIdentNode);
                 this.match("Identifier", fullIdentNode);
@@ -420,10 +426,11 @@ export class ParserService {
                 throw { name: "NoTokenMatchError", message: "Token does not match input" };
         }
 
-        while (true) {
-            console.log("3");
 
-            if (nextToken.name === "DOT" && nextToken.name === "Identifier") {
+        while (true) {
+            nextToken = this.getLookaheadToken(1);
+            var nextNextToken = this.getLookaheadToken(2);
+            if (nextToken.name === "DOT" && nextNextToken.name === "Identifier") {
                 this.match("DOT", optionNode);
                 this.match("Identifier", optionNode);
             } else {
@@ -537,7 +544,6 @@ export class ParserService {
         var backup_lookahead = this.lookahead;
         try {
             while (true) {
-                console.log("4");
 
                 backup_position = this.position;
                 backup_ringbuffer = this.ringbuffer.slice();
@@ -553,6 +559,8 @@ export class ParserService {
                     this.option(messageBodyNode);
                 } else if (this.spec_oneof()) {
                     this.oneof(messageBodyNode);
+                } else if (this.spec_mapField()) {
+                    this.mapField(messageBodyNode);
                 } else if (this.spec_reserved()) {
                     this.reserved(messageBodyNode);
                 } else {
@@ -645,9 +653,9 @@ export class ParserService {
         }
 
         this.type(fieldNode);
-        this.match("Identifier", fieldNode);
+        this.fieldName(fieldNode);
         this.match("ASSIGN", fieldNode);
-        this.match("IntegerLiteral", fieldNode);
+        this.fieldNumber(fieldNode);
 
         nextToken = this.getLookaheadToken(1);
 
@@ -791,9 +799,9 @@ export class ParserService {
         }
 
         while (true) {
-            console.log("5");
-
-            if (nextToken.name === "Identifier" && nextToken.name === "DOT") {
+            nextToken = this.getLookaheadToken(1);
+            var nextNextToken = this.getLookaheadToken(2);
+            if (nextToken.name === "Identifier" && nextNextToken.name === "DOT") {
                 this.match("Identifier", messageOrEnumNode);
                 this.match("DOT", messageOrEnumNode);
             } else {
@@ -819,7 +827,6 @@ export class ParserService {
         var backup_lookahead = this.lookahead;
         try {
             while (true) {
-                console.log("6");
 
                 backup_position = this.position;
                 backup_ringbuffer = this.ringbuffer.slice();
@@ -880,7 +887,6 @@ export class ParserService {
 
         try {
             while (true) {
-                console.log("7");
 
                 backup_position = this.position;
                 backup_ringbuffer = this.ringbuffer.slice();
@@ -940,7 +946,6 @@ export class ParserService {
             backup_enumFieldNode = enumFieldNode;
             try {
                 while (true) {
-                    console.log("8");
                     backup_position = this.position;
                     backup_ringbuffer = this.ringbuffer.slice();
                     backup_tokens = this.tokens.slice();
@@ -954,11 +959,12 @@ export class ParserService {
                 if (e.name != "NoTokenMatchError") {
                     throw e;
                 }
-                this.match("RBRACE", backup_enumFieldNode);
                 this.position = backup_position;
                 this.ringbuffer = backup_ringbuffer.slice();
                 this.tokens = backup_tokens.slice();
                 this.lookahead = backup_lookahead;
+                this.match("RBRACK", backup_enumFieldNode);
+
             }
 
         } catch (e) {
@@ -969,6 +975,7 @@ export class ParserService {
             this.ringbuffer = backup_ringbuffer.slice();
             this.tokens = backup_tokens.slice();
             this.lookahead = backup_lookahead;
+            this.match("SEMI", backup_enumFieldNode);
         }
 
         node.addChild(backup_enumFieldNode);
@@ -1020,7 +1027,6 @@ export class ParserService {
 
         try {
             while (true) {
-                console.log("9");
 
                 backup_position = this.position;
                 backup_ringbuffer = this.ringbuffer.slice();
@@ -1067,9 +1073,9 @@ export class ParserService {
         var oneofFieldNode: ASTNode = new ASTNode("oneofField", "");
 
         this.type(oneofFieldNode);
-        this.match("Identifier", oneofFieldNode);
+        this.fieldName(oneofFieldNode);
         this.match("ASSIGN", oneofFieldNode);
-        this.match("IntegerLiteral", oneofFieldNode);
+        this.fieldNumber(oneofFieldNode);
         this.match("LBRACK", oneofFieldNode);
 
         var backup_oneofFieldNode = oneofFieldNode.copy();
@@ -1080,7 +1086,6 @@ export class ParserService {
 
         try {
             while (true) {
-                console.log("10");
                 backup_position = this.position;
                 backup_ringbuffer = this.ringbuffer.slice();
                 backup_tokens = this.tokens.slice();
@@ -1243,7 +1248,6 @@ export class ParserService {
         var backup_lookahead = this.lookahead;
         try {
             while (true) {
-                console.log("11");
                 backup_position = this.position;
                 backup_ringbuffer = this.ringbuffer.slice();
                 backup_tokens = this.tokens.slice();
@@ -1277,7 +1281,12 @@ export class ParserService {
         if (nextToken.name == "IntegerLiteral" && nextNextToken.name == "TO") {
             this.match("IntegerLiteral", rangeNode);
             this.match("TO", rangeNode);
-            this.match("IntegerLiteral", rangeNode);
+            nextToken = this.getLookaheadToken(1);
+            if (nextToken.name == "IntegerLiteral") {
+                this.match("IntegerLiteral", rangeNode);
+            } else {
+                this.match("MAX", rangeNode);
+            }
         } else {
             this.match("IntegerLiteral", rangeNode);
         }
@@ -1298,7 +1307,6 @@ export class ParserService {
         var backup_lookahead = this.lookahead;
         try {
             while (true) {
-                console.log("12");
                 backup_position = this.position;
                 backup_ringbuffer = this.ringbuffer.slice();
                 backup_tokens = this.tokens.slice();
@@ -1337,7 +1345,6 @@ export class ParserService {
         var backup_lookahead = this.lookahead;
         try {
             while (true) {
-                console.log("13");
                 var nextToken = this.getLookaheadToken(1);
                 backup_position = this.position;
                 backup_ringbuffer = this.ringbuffer.slice();
@@ -1411,7 +1418,6 @@ export class ParserService {
             try {
                 this.match("LBRACE", rpcNode);
                 while (true) {
-                    console.log("14");
                     backup_position = this.position;
                     backup_ringbuffer = this.ringbuffer.slice();
                     backup_tokens = this.tokens.slice();
@@ -1455,7 +1461,6 @@ export class ParserService {
         }
 
         while (true) {
-            console.log("15");
             if (nextToken.name === "Identifier" && nextToken.name === "DOT") {
                 this.match("Identifier", messageTypeNode);
                 this.match("DOT", messageTypeNode);
@@ -1468,6 +1473,20 @@ export class ParserService {
 
         node.addChild(messageTypeNode);
 
+    }
+
+    fieldName(node: ASTNode) {
+        var fieldNameNode: ASTNode = new ASTNode("fieldName", "");
+        this.match("Identifier", fieldNameNode);
+        node.addChild(fieldNameNode);
+
+
+    }
+
+    fieldNumber(node: ASTNode) {
+        var fieldNumberNode: ASTNode = new ASTNode("fieldNumber", "");
+        this.match("IntegerLiteral", fieldNumberNode);
+        node.addChild(fieldNumberNode);
     }
 
 

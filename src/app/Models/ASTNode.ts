@@ -9,7 +9,9 @@ export class ASTNode {
   rule = "";
   token = "";
   tree = "";
-  value = "moin";
+  value = "";
+  line;
+  index;
 
 
 
@@ -24,7 +26,6 @@ export class ASTNode {
     this.tree = this.getType();
     for (var child in this.children) {
       this.drawLevel(this.children[child], 1);
-      console.log("1");
     }
 
     return this.tree;
@@ -33,12 +34,10 @@ export class ASTNode {
   drawLevel(node:ASTNode, level) {
     this.tree += "\n|"
     for (var i = 0; i < level; i++) {
-      console.log("2");
       this.tree += "__";
     }
     this.tree += node.getType();
     for (var child in node.children) {
-      console.log("3");
       this.drawLevel(node.children[child], level+1);
       
     }
@@ -66,7 +65,6 @@ export class ASTNode {
 
     this.copyProperties(copyNode,this);
     for (var child in this.children) {
-      console.log("4");
       var copyChild:ASTNode = new ASTNode("","");
       this.copyRec(copyChild,copyNode,this.children[child]);
 
@@ -80,7 +78,6 @@ export class ASTNode {
       copyParent.addChild(copyNode);
 
       for (var child in originNode.children) {
-        console.log("5");
         
         var copyChild:ASTNode = new ASTNode("","");
         this.copyRec(copyChild,copyNode,originNode.children[child]);
@@ -95,6 +92,20 @@ export class ASTNode {
     copyNode.token = originNode.token;
     copyNode.tree = originNode.tree;
     copyNode.value = originNode.value;
+    copyNode.index = originNode.index;
+    copyNode.line = originNode.line;
   }
+
+  treeAsList(node:ASTNode){
+    var treeList = [];
+    treeList.push(node);
+    for(var child in node.children){
+      treeList = treeList.concat(this.treeAsList(node.children[child])); 
+    }
+    return treeList;
+
+  }
+
+  
 
 }

@@ -2,6 +2,8 @@ import { Component } from '@angular/core';
 import { LexerService } from './services/lexer.service';
 import { ParserService } from './services/parser.service';
 import { ASTNode } from './Models/ASTNode'
+import { SemanticAnalyzerService } from './services/semanticAnalyzer.service';
+
 
 @Component({
   selector: 'app-root',
@@ -20,7 +22,7 @@ export class AppComponent {
   lookaheadSize = 3;
   showAST = true;
 
-  constructor(public lexerService: LexerService, public parserService: ParserService) { }
+  constructor(public lexerService: LexerService, public parserService: ParserService, public semanticAnalyzerService:SemanticAnalyzerService) { }
 
 
 
@@ -48,7 +50,15 @@ export class AppComponent {
     var startTime = new Date();
     var tokens = this.lexing(startTime);
     console.log(tokens);
-    var tree = this.parsing(startTime, tokens);
+    if (tokens) {
+      var tree = this.parsing(startTime, tokens);
+
+      if(tree){
+        var result = this.analyzing(startTime, tree);
+      }
+    }
+
+
     console.log("tree");
 
 
@@ -95,19 +105,62 @@ export class AppComponent {
     afterParsingTime /= 1000;
     if (result[1] === "success") {
       this.appendConsole(afterParsingTime + "s - Parsing succeeded!");
+      var tree: ASTNode = result[0];
       if (this.showAST) {
-        var tree: ASTNode = result[0];
         this.appendConsole("AST:");
         this.appendConsole(tree.draw());
       }
       return tree;
-    } else if (result[1] === "failure") {
+    } else if (result[0] === "failure") {
       this.appendConsole(afterParsingTime + "s - Parsing failed!");
+      if(result[2][0].name != "NULL"){
+        if(result[2][1].value != ""){
+        this.appendConsole("Expected "+result[2][0]+", but received "+result[2][1].name+" '"+result[2][1].value+"':");
+        }else{
+          this.appendConsole("Expected "+result[2][0]+", but received "+result[2][1].name+":");
+        }
+        var lines = this.srcText.split("\n");
+        this.appendConsole("at line "+result[2][1].line+" and index "+result[2][1].index);
+        var errorPosition = lines[result[2][1].line-1].substr(0, result[2][1].index-1) + "[ERROR->]" + lines[result[2][1].line-1].substr(result[2][1].index-1);
+        this.appendConsole(errorPosition);
+        
+      }else{
+        this.appendConsole("Expected "+result[2][0]+", but no more Tokens left");
+      }
       return null;
 
 
     }
 
+  }
+
+  analyzing(startTime, tree){
+    var analyzingTime = new Date().getMilliseconds() - startTime.getMilliseconds();
+    analyzingTime /= 1000;
+
+    this.appendConsole(analyzingTime + "s - Starting Semantic Analysis ...");
+    this.semanticAnalyzerService.initialize(tree);
+    var result = this.semanticAnalyzerService.analyze();
+    var afterAnalyzationTime = new Date().getMilliseconds() - startTime.getMilliseconds();
+    afterAnalyzationTime /=1000;
+
+    if (result[0] === "success") {
+      this.appendConsole(afterAnalyzationTime + "s - Semantic Analysis succeeded!");
+
+      return result;
+
+    } else if (result[0] === "failure") {
+      this.appendConsole(afterAnalyzationTime + "s - Semantic Analysis failed!");
+      
+      result.shift();
+
+      for(var error in result){
+        var errorNumber = parseInt(error)+1;
+        this.appendConsole("Error "+errorNumber+": "+result[error]);
+      }
+      return null;
+
+    }
   }
 
   appendConsole(text) {
