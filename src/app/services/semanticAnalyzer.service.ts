@@ -15,18 +15,14 @@ export class SemanticAnalyzerService {
 
 
     analyze() {
-        var uniqueIdentifierResult = this.messageUniqueTagsAnalyzation();
-        this.errors = this.errors.concat(uniqueIdentifierResult);
+        this.errors = this.errors.concat(this.messageUniqueIdentifierAnalyzation());
+        this.errors = this.errors.concat(this.messageUniqueTagsAnalyzation());
+        this.errors = this.errors.concat(this.messageTagValueAnalyzation());
+        
 
-
-
-
-
-
-
-        if(this.errors.length > 0){
+        if (this.errors.length > 0) {
             this.errors.unshift("failure");
-        }else{
+        } else {
             this.errors.unshift("success");
         }
 
@@ -35,7 +31,125 @@ export class SemanticAnalyzerService {
     }
 
 
+
+
+
+    messageTagValueAnalyzation() {
+
+        var allNodes = [];
+        allNodes = this.tree.treeAsList(this.tree);
+        var messageNodes = [];
+        var fieldNodes = [];
+        var errorMessages = [];
+
+
+        for (var node in allNodes) {
+            //Alle existierenden Nodes
+            if (allNodes[node].rule === "messageBody") {
+                //Alle Node, die messageBody sind
+                messageNodes.push(allNodes[node]);
+                fieldNodes.push([]);
+            }
+        }
+
+        for (var node in messageNodes) {
+            //Alle Nodes, die MessageBody sind
+            for (var childNode in messageNodes[node].children) {
+                //Alle direkten Kinder der MessageBodies
+                if (messageNodes[node].children[childNode].rule === "field") {
+                    //Alle direkten Kinder der MessageBodies, die Field sind
+                    fieldNodes[node].push(messageNodes[node].children[childNode]);
+                }
+            }
+        }
+
+        for (var message in fieldNodes) {
+            //Für alle gespeicherten MessageBodies
+            for (var fieldNode in fieldNodes[message]) {
+                //Pro MessageBody alle FieldNodes            
+                for (var names in fieldNodes[message][fieldNode].children) {
+                    //Pro FieldNode alle Kinder
+                    if (fieldNodes[message][fieldNode].children[names].rule === "fieldNumber") {
+                        var tagToken = fieldNodes[message][fieldNode].children[names].children[0];
+                        if (tagToken.value < 1 || tagToken.value > 536870911) {
+                            errorMessages.push("Message Field Tag '"+tagToken.value+"' in line " + tagToken.line + " and at index " + tagToken.index + " is out of range (1-536870911).");
+                        }else if(tagToken.value >= 19000 || tagToken.value > 19999){
+                            errorMessages.push("Message Field Tag '"+tagToken.value+"' in line " + tagToken.line + " and at index " + tagToken.index + " is in reserved range (19000-19999).");
+                        }
+                    }
+                }
+
+            }
+
+        }
+
+        return errorMessages;
+    }
+
+
+
+
+
     messageUniqueTagsAnalyzation() {
+
+        var allNodes = [];
+        allNodes = this.tree.treeAsList(this.tree);
+        var messageNodes = [];
+        var fieldNodes = [];
+        var duplicateFieldTagTokens = [];
+        var errorMessages = [];
+
+        for (var node in allNodes) {
+            //Alle existierenden Nodes
+            if (allNodes[node].rule === "messageBody") {
+                //Alle Node, die messageBody sind
+                messageNodes.push(allNodes[node]);
+                fieldNodes.push([]);
+            }
+        }
+
+        for (var node in messageNodes) {
+            //Alle Nodes, die MessageBody sind
+            for (var childNode in messageNodes[node].children) {
+                //Alle direkten Kinder der MessageBodies
+                if (messageNodes[node].children[childNode].rule === "field") {
+                    //Alle direkten Kinder der MessageBodies, die Field sind
+                    fieldNodes[node].push(messageNodes[node].children[childNode]);
+                }
+            }
+        }
+
+        for (var message in fieldNodes) {
+            //Für alle gespeicherten MessageBodies
+            var fieldNumbers = [];
+            for (var fieldNode in fieldNodes[message]) {
+                //Pro MessageBody alle FieldNodes            
+                for (var names in fieldNodes[message][fieldNode].children) {
+                    //Pro FieldNumber alle Kinder
+                    if (fieldNodes[message][fieldNode].children[names].rule === "fieldNumber") {
+                        //Falls ein FieldNode Kind eine FieldNumber ist
+                        fieldNumbers.push(fieldNodes[message][fieldNode].children[names].children[0]);
+                    }
+                }
+
+            }
+            if (fieldNumbers.length > 1) {
+                duplicateFieldTagTokens = duplicateFieldTagTokens.concat(this.check_duplicateTokens(fieldNumbers));
+            }
+        }
+        for (var i = 0; i < duplicateFieldTagTokens.length; i++) {
+            console.log(i);
+            errorMessages.push("Duplicate message field tag '" +
+                duplicateFieldTagTokens[i].value + "' in lines " + duplicateFieldTagTokens[i].line + " and " + duplicateFieldTagTokens[i + 1].line);
+            i++;
+        }
+
+        return errorMessages;
+    }
+
+
+
+    messageUniqueIdentifierAnalyzation() {
 
         var allNodes = [];
         allNodes = this.tree.treeAsList(this.tree);
@@ -76,17 +190,17 @@ export class SemanticAnalyzerService {
                         fieldNames.push(fieldNodes[message][fieldNode].children[names].children[0]);
                     }
                 }
-                
+
             }
             if (fieldNames.length > 1) {
                 duplicateFieldNameTokens = duplicateFieldNameTokens.concat(this.check_duplicateTokens(fieldNames));
             }
         }
         console.log(duplicateFieldNameTokens);
-        for(var i = 0;i < duplicateFieldNameTokens.length;i++){
+        for (var i = 0; i < duplicateFieldNameTokens.length; i++) {
             console.log(i);
-            errorMessages.push("Duplicate message field identifier "+
-                duplicateFieldNameTokens[i].value+" in lines "+duplicateFieldNameTokens[i].line+" and "+duplicateFieldNameTokens[i+1].line);
+            errorMessages.push("Duplicate message field identifier '" +
+                duplicateFieldNameTokens[i].value + "' in lines " + duplicateFieldNameTokens[i].line + " and " + duplicateFieldNameTokens[i + 1].line);
             i++;
         }
 
@@ -95,14 +209,14 @@ export class SemanticAnalyzerService {
 
 
     check_duplicateTokens(tokenList) {
-        
+
         tokenList.sort(function (a, b) {
             return a.value.localeCompare(b.value);
         });
         var duplicates = [];
 
-        for(var i = 0;i < tokenList.length;i++){
-            if (tokenList[i].value === tokenList[i + 1].value) {                
+        for (var i = 0; i < tokenList.length; i++) {
+            if (tokenList[i].value === tokenList[i + 1].value) {
                 duplicates.push(tokenList[i]);
                 duplicates.push(tokenList[i + 1]);
             }
