@@ -18,7 +18,8 @@ export class SemanticAnalyzerService {
         this.errors = this.errors.concat(this.messageUniqueIdentifierAnalyzation());
         this.errors = this.errors.concat(this.messageUniqueTagsAnalyzation());
         this.errors = this.errors.concat(this.messageTagValueAnalyzation());
-        
+        this.errors = this.errors.concat(this.enumStartswithZero());
+
 
         if (this.errors.length > 0) {
             this.errors.unshift("failure");
@@ -32,7 +33,65 @@ export class SemanticAnalyzerService {
 
 
 
+    enumStartswithZero() {
 
+
+
+        var allNodes = [];
+        allNodes = this.tree.treeAsList(this.tree);
+        var enumNodes = [];
+        var bodyNodes = [];
+        var errorMessages = [];
+
+        for (var node in allNodes) {
+            //Alle existierenden Nodes
+            if (allNodes[node].rule === "enumDefinition") {
+                //Alle Node, die enumDefinition sind
+                enumNodes.push(allNodes[node]);
+            }
+        }
+
+        for (var node in enumNodes) {
+            //Alle Nodes, die enumDefinition sind
+            for (var childNode in enumNodes[node].children) {
+                //Alle direkten Kinder der enumDefinitions
+                if (enumNodes[node].children[childNode].rule === "enumBody") {
+                    
+                    //Alle direkten Kinder der enums, die Body sind
+                    bodyNodes.push(enumNodes[node].children[childNode]);
+                }
+            }
+        }
+
+        for (var idx in bodyNodes) {
+            //Für alle gespeicherten enumBodies
+            for (var child in bodyNodes[idx].children) {
+                if (bodyNodes[idx].children[child].rule === "enumField") {
+                    if (bodyNodes[idx].children[child].children[2].token === "IntegerLiteral") {
+                        if (bodyNodes[idx].children[child].children[2].value != 0) {
+                            errorMessages.push("First Field Tag '"+bodyNodes[idx].children[child].children[2].value+"' in Enum in line " +
+                                bodyNodes[idx].children[child].children[2].line + " and at index " + bodyNodes[idx].children[child].children[2].index +
+                                " does not equal zero.");
+
+                        }
+                    } else if (bodyNodes[idx].children[child].children[3].token === "IntegerLiteral") {
+                        if (bodyNodes[idx].children[child].children[3].value != 0) {
+                            errorMessages.push("First Field Tag '"+bodyNodes[idx].children[child].children[2].value+"' in Enum in line " +
+                            bodyNodes[idx].children[child].children[3].line + " and at index " + bodyNodes[idx].children[child].children[3].index +
+                            " does not equal zero.");
+
+                        }
+
+                    }
+                    break;
+                }
+            }
+
+        }
+
+        return errorMessages;
+
+    }
 
     messageTagValueAnalyzation() {
 
@@ -72,9 +131,9 @@ export class SemanticAnalyzerService {
                     if (fieldNodes[message][fieldNode].children[names].rule === "fieldNumber") {
                         var tagToken = fieldNodes[message][fieldNode].children[names].children[0];
                         if (tagToken.value < 1 || tagToken.value > 536870911) {
-                            errorMessages.push("Message Field Tag '"+tagToken.value+"' in line " + tagToken.line + " and at index " + tagToken.index + " is out of range (1-536870911).");
-                        }else if(tagToken.value >= 19000 || tagToken.value > 19999){
-                            errorMessages.push("Message Field Tag '"+tagToken.value+"' in line " + tagToken.line + " and at index " + tagToken.index + " is in reserved range (19000-19999).");
+                            errorMessages.push("Message Field Tag '" + tagToken.value + "' in line " + tagToken.line + " and at index " + tagToken.index + " is out of range (1-536870911).");
+                        } else if (tagToken.value >= 19000 || tagToken.value > 19999) {
+                            errorMessages.push("Message Field Tag '" + tagToken.value + "' in line " + tagToken.line + " and at index " + tagToken.index + " is in reserved range (19000-19999).");
                         }
                     }
                 }
@@ -138,7 +197,6 @@ export class SemanticAnalyzerService {
             }
         }
         for (var i = 0; i < duplicateFieldTagTokens.length; i++) {
-            console.log(i);
             errorMessages.push("Duplicate message field tag '" +
                 duplicateFieldTagTokens[i].value + "' in lines " + duplicateFieldTagTokens[i].line + " and " + duplicateFieldTagTokens[i + 1].line);
             i++;
@@ -196,9 +254,7 @@ export class SemanticAnalyzerService {
                 duplicateFieldNameTokens = duplicateFieldNameTokens.concat(this.check_duplicateTokens(fieldNames));
             }
         }
-        console.log(duplicateFieldNameTokens);
         for (var i = 0; i < duplicateFieldNameTokens.length; i++) {
-            console.log(i);
             errorMessages.push("Duplicate message field identifier '" +
                 duplicateFieldNameTokens[i].value + "' in lines " + duplicateFieldNameTokens[i].line + " and " + duplicateFieldNameTokens[i + 1].line);
             i++;
