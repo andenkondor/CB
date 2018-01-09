@@ -523,7 +523,7 @@ export class ParserService {
     message(node: ASTNode = null) {
         var messageNode: ASTNode = new ASTNode("message", "");
         this.match("MESSAGE", messageNode);
-        this.match("Identifier", messageNode);
+        this.messageName(messageNode);
         this.messageBody(messageNode);
         if (node) {
             node.addChild(messageNode);
@@ -866,7 +866,7 @@ export class ParserService {
         var enumDefinitionNode: ASTNode = new ASTNode("enumDefinition", "");
 
         this.match("ENUM", enumDefinitionNode);
-        this.match("Identifier", enumDefinitionNode);
+        this.enumName(enumDefinitionNode);
         this.enumBody(enumDefinitionNode);
 
         if (node) {
@@ -933,7 +933,7 @@ export class ParserService {
             this.match("MINUS", enumFieldNode);
         }
 
-        this.match("IntegerLiteral", enumFieldNode);
+        this.enumFieldTag(enumFieldNode);
 
         var backup_enumFieldNode = enumFieldNode.copy();
         var backup_position = this.position;
@@ -1487,6 +1487,28 @@ export class ParserService {
         var fieldNumberNode: ASTNode = new ASTNode("fieldNumber", "");
         this.match("IntegerLiteral", fieldNumberNode);
         node.addChild(fieldNumberNode);
+    }
+
+    enumName(node: ASTNode) {
+        var enumNameNode: ASTNode = new ASTNode("enumName", "");
+        this.match("Identifier", enumNameNode);
+        node.addChild(enumNameNode);
+
+
+    }
+
+    messageName(node: ASTNode) {
+        var messageNameNode: ASTNode = new ASTNode("messageName", "");
+        this.match("Identifier", messageNameNode);
+        node.addChild(messageNameNode);
+
+
+    }
+
+    enumFieldTag(node: ASTNode){
+        var enumFieldTagNode: ASTNode = new ASTNode("enumFieldTag", "");
+        this.match("IntegerLiteral", enumFieldTagNode);
+        node.addChild(enumFieldTagNode);
     }
 
 
