@@ -913,18 +913,18 @@ export class ParserService {
             this.tokens = backup_tokens.slice();
             this.lookahead = backup_lookahead;
 
+        } finally {
+
+            this.match("RBRACE", backup_enumBodyNode);
+            node.addChild(backup_enumBodyNode);
         }
-
-        this.match("RBRACE", backup_enumBodyNode);
-        node.addChild(backup_enumBodyNode);
-
 
     }
 
     enumField(node: ASTNode) {
         var enumFieldNode: ASTNode = new ASTNode("enumField", "");
 
-        this.match("Identifier", enumFieldNode);
+        this.enumFieldName(enumFieldNode);
         this.match("ASSIGN", enumFieldNode);
 
         var nextToken = this.getLookaheadToken(1);
@@ -943,7 +943,7 @@ export class ParserService {
         try {
             this.match("LBRACK", enumFieldNode)
             this.fieldOption(enumFieldNode);
-            backup_enumFieldNode = enumFieldNode;
+            backup_enumFieldNode = enumFieldNode.copy();
             try {
                 while (true) {
                     backup_position = this.position;
@@ -976,10 +976,10 @@ export class ParserService {
             this.tokens = backup_tokens.slice();
             this.lookahead = backup_lookahead;
             this.match("SEMI", backup_enumFieldNode);
-        }
+        }finally{
 
         node.addChild(backup_enumFieldNode);
-
+        }
 
 
 
@@ -1505,10 +1505,16 @@ export class ParserService {
 
     }
 
-    enumFieldTag(node: ASTNode){
+    enumFieldTag(node: ASTNode) {
         var enumFieldTagNode: ASTNode = new ASTNode("enumFieldTag", "");
         this.match("IntegerLiteral", enumFieldTagNode);
         node.addChild(enumFieldTagNode);
+    }
+
+    enumFieldName(node: ASTNode) {
+        var enumFieldNameNode: ASTNode = new ASTNode("enumFieldName", "");
+        this.match("Identifier", enumFieldNameNode);
+        node.addChild(enumFieldNameNode);
     }
 
 

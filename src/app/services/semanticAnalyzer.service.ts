@@ -16,12 +16,14 @@ export class SemanticAnalyzerService {
 
 
     analyze() {
+        this.errors = this.errors.concat(this.scopeUnknownTypes());        
+        this.errors = this.errors.concat(this.enumTagRange());
+        this.errors = this.errors.concat(this.enumStartswithZero());
         this.errors = this.errors.concat(this.messageUniqueTagsAnalyzation());
         this.errors = this.errors.concat(this.messageTagValueAnalyzation());
-        this.errors = this.errors.concat(this.enumStartswithZero());
         this.errors = this.errors.concat(this.scopeDoubleIdentifiers(true, null));
         this.errors = this.errors.concat(this.doubleEnumTagAnalyzation());
-        
+
 
 
 
@@ -35,6 +37,54 @@ export class SemanticAnalyzerService {
         return this.errors;
 
     }
+
+    //Prüft, ob alle nicht-standard Datentypen vorher definiert wurden
+    scopeUnknownTypes() {
+        var scope = new ScopeNode();
+        scope.name = "start";
+        scope = this.getScope(this.tree, scope);
+        var errorMessages = [];
+        var allScopes = [];
+        allScopes = scope.treeAsList(scope);
+
+
+
+        for(var idx in allScopes){
+            errorMessages = errorMessages.concat(this.lookForTypes(allScopes[idx],allScopes[idx].typeNodes));
+        }
+
+        return errorMessages;
+
+
+    }
+
+
+    lookForTypes(scope: ScopeNode, types){
+
+        for (var i = types.length - 1; i >= 0; i--) {
+            for(var identifier in scope.nameNodes){
+                if(types[i].value === scope.nameNodes[identifier].value){
+                    types.splice(i,1);
+                    break;
+                }
+            }
+        }
+
+        if(types && types.length > 0 && !scope.parent){
+            var errorMessages = [];
+            for(var type in types){
+                errorMessages.push("Cannot resolve Type "+types[type].value+" at line "+types[type].line+" and index "+types[type].index);
+            }
+            return errorMessages;
+
+        }else if(!types || types.length == 0){
+            return [];
+            
+        }else{
+            return this.lookForTypes(scope.parent,types);
+        }
+
+    }
     //Sucht nach doppelten Identifiern innerhalb eines Scopes
     scopeDoubleIdentifiers(init, scope: ScopeNode) {
         if (init) {
@@ -44,9 +94,9 @@ export class SemanticAnalyzerService {
         }
         var errormessages = [];
         var identifiers = [];
-        for (var token in scope.nodes) {
-            if (scope.nodes[token].token === "Identifier") {
-                identifiers.push(scope.nodes[token]);
+        for (var token in scope.nameNodes) {
+            if (scope.nameNodes[token].token === "Identifier") {
+                identifiers.push(scope.nameNodes[token]);
             }
         }
 
@@ -79,8 +129,11 @@ export class SemanticAnalyzerService {
         for (var child in tree.children) {
             if (tree.children[child].rule === "enumName" ||
                 tree.children[child].rule === "messageName" ||
-                tree.children[child].rule === "fieldName") {
-                    scopes.nodes.push(tree.children[child].children[0]);
+                tree.children[child].rule === "fieldName" ||
+                tree.children[child].rule === "enumFieldName") {
+                scopes.nameNodes.push(tree.children[child].children[0]);
+            } else if(tree.children[child].rule === "messageOrEnumType"){
+                scopes.typeNodes.push(tree.children[child].children[0]);
             } else if (tree.children[child].rule === "messageBody") {
                 var newScope: ScopeNode = new ScopeNode();
                 newScope.addParent(scopes);
@@ -124,7 +177,6 @@ export class SemanticAnalyzerService {
             for (var childNode in enumNodes[node].children) {
                 //Alle direkten Kinder der enumDefinitions
                 if (enumNodes[node].children[childNode].rule === "enumBody") {
-
                     //Alle direkten Kinder der enums, die Body sind
                     bodyNodes.push(enumNodes[node].children[childNode]);
                 }
@@ -134,26 +186,91 @@ export class SemanticAnalyzerService {
         for (var idx in bodyNodes) {
             //Für alle gespeicherten enumBodies
             for (var child in bodyNodes[idx].children) {
+
                 if (bodyNodes[idx].children[child].rule === "enumField") {
-                    if (bodyNodes[idx].children[child].children[2].token === "IntegerLiteral") {
-                        if (bodyNodes[idx].children[child].children[2].value != 0) {
-                            errorMessages.push("First Field Tag '" + bodyNodes[idx].children[child].children[2].value + "' in Enum in line " +
-                                bodyNodes[idx].children[child].children[2].line + " and at index " + bodyNodes[idx].children[child].children[2].index +
+                    if (bodyNodes[idx].children[child].children[2].rule === "enumFieldTag") {
+                        if (bodyNodes[idx].children[child].children[2].children[0].value != 0) {
+                            errorMessages.push("First Field Tag '" + bodyNodes[idx].children[child].children[2].children[0].value + "' in Enum in line " +
+                                bodyNodes[idx].children[child].children[2].children[0].line + " and at index " + bodyNodes[idx].children[child].children[2].children[0].index +
                                 " does not equal zero.");
 
                         }
-                    } else if (bodyNodes[idx].children[child].children[3].token === "IntegerLiteral") {
-                        if (bodyNodes[idx].children[child].children[3].value != 0) {
-                            errorMessages.push("First Field Tag '" + bodyNodes[idx].children[child].children[2].value + "' in Enum in line " +
-                                bodyNodes[idx].children[child].children[3].line + " and at index " + bodyNodes[idx].children[child].children[3].index +
-                                " does not equal zero.");
-
-                        }
+                    } else if (bodyNodes[idx].children[child].children[3].children[0].value != 0) {
+                        errorMessages.push("First Field Tag '" + bodyNodes[idx].children[child].children[3].children[0].value + "' in Enum in line " +
+                            bodyNodes[idx].children[child].children[3].children[0].line + " and at index " + bodyNodes[idx].children[child].children[3].children[0].index +
+                            " does not equal zero.");
 
                     }
+
+
+
                     break;
                 }
             }
+
+
+        }
+
+        return errorMessages;
+
+    }
+
+    //Prüft, ob alle Enum-Tags in korrekter Range
+    enumTagRange() {
+
+        var allNodes = [];
+        allNodes = this.tree.treeAsList(this.tree);
+        var enumNodes = [];
+        var bodyNodes = [];
+        var errorMessages = [];
+
+        for (var node in allNodes) {
+            //Alle existierenden Nodes
+            if (allNodes[node].rule === "enumDefinition") {
+                //Alle Node, die enumDefinition sind
+                enumNodes.push(allNodes[node]);
+            }
+        }
+
+        for (var node in enumNodes) {
+            //Alle Nodes, die enumDefinition sind
+            for (var childNode in enumNodes[node].children) {
+                //Alle direkten Kinder der enumDefinitions
+                if (enumNodes[node].children[childNode].rule === "enumBody") {
+                    //Alle direkten Kinder der enums, die Body sind
+                    bodyNodes.push(enumNodes[node].children[childNode]);
+                }
+            }
+        }
+
+        for (var idx in bodyNodes) {
+            //Für alle gespeicherten enumBodies
+            for (var child in bodyNodes[idx].children) {
+
+                if (bodyNodes[idx].children[child].rule === "enumField") {
+                    if (bodyNodes[idx].children[child].children[2].rule === "enumFieldTag") {
+                        if (bodyNodes[idx].children[child].children[2].children[0].value > 4294967295 ||
+                            bodyNodes[idx].children[child].children[2].children[0].value < 0) {
+                            errorMessages.push("Field Tag '" + bodyNodes[idx].children[child].children[2].children[0].value + "' in Enum in line " +
+                                bodyNodes[idx].children[child].children[2].children[0].line + " and at index " + bodyNodes[idx].children[child].children[2].children[0].index +
+                                " is out of range (0-4294967295).");
+
+                        }
+                    } else {
+                     if (bodyNodes[idx].children[child].children[3].children[0].value > 4294967295 ||
+                        bodyNodes[idx].children[child].children[3].children[0].value < 0) {
+                        errorMessages.push("Field Tag '" + bodyNodes[idx].children[child].children[3].children[0].value + "' in Enum in line " +
+                            bodyNodes[idx].children[child].children[3].children[0].line + " and at index " + bodyNodes[idx].children[child].children[3].children[0].index +
+                            " is out of range (0-4294967295).");
+
+                    }
+
+
+                }
+
+                }
+            }
+
 
         }
 
@@ -162,7 +279,7 @@ export class SemanticAnalyzerService {
     }
 
     //Prüft, ob alle Enum-Tags einzigartig
-    doubleEnumTagAnalyzation(){
+    doubleEnumTagAnalyzation() {
 
         var allNodes = [];
         allNodes = this.tree.treeAsList(this.tree);
@@ -213,16 +330,16 @@ export class SemanticAnalyzerService {
         }
         for (var i = 0; i < duplicateTags.length; i++) {
             errorMessages.push("Duplicate enum tag '" +
-            duplicateTags[i].value + "' in lines " + duplicateTags[i].line + " and " + duplicateTags[i + 1].line);
+                duplicateTags[i].value + "' in lines " + duplicateTags[i].line + " and " + duplicateTags[i + 1].line);
             i++;
         }
 
         return errorMessages;
 
     }
-    
-    
-    
+
+
+
     //Prüft, ob alle Message-Tags validen Wert besitzen
     messageTagValueAnalyzation() {
 
@@ -401,7 +518,7 @@ export class SemanticAnalyzerService {
         });
         var duplicates = [];
 
-        for (var i = 0; i < tokenList.length-1; i++) {
+        for (var i = 0; i < tokenList.length - 1; i++) {
 
 
             if (tokenList[i].value === tokenList[i + 1].value) {

@@ -7,7 +7,8 @@ export class ScopeNode {
   name = "";
   children:ScopeNode[] = [];
   parent:ScopeNode;
-  nodes:ASTNode[] = [];
+  nameNodes:ASTNode[] = [];
+  typeNodes:ASTNode[] = [];
   tree = "";
 
 
@@ -43,6 +44,16 @@ export class ScopeNode {
       
     }
 
+
+  }
+
+  treeAsList(node:ScopeNode){
+    var treeList = [];
+    treeList.push(node);
+    for(var child in node.children){
+      treeList = treeList.concat(this.treeAsList(node.children[child])); 
+    }
+    return treeList;
 
   }
 
