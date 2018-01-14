@@ -12,6 +12,7 @@ export class ASTNode {
   value = "";
   line;
   index;
+  counter = 1;
 
 
 
@@ -50,6 +51,19 @@ export class ASTNode {
     } else {
       if(this.value != ""){
         return "Token: " + this.token+" - Value: "+this.value;
+      }else{
+        return "Token: " + this.token;
+      }
+      
+    }
+  }
+
+  getTypeNewline() {
+    if (this.rule != "") {
+      return "Rule: " + this.rule;
+    } else {
+      if(this.value != ""){
+        return "Token: " + this.token+" - \nValue: "+this.value;
       }else{
         return "Token: " + this.token;
       }
@@ -104,6 +118,44 @@ export class ASTNode {
 
   }
 
+  getGraphic(nodes, edges){
+    
+    var id = this.counter;
+    console.log(this.getType());
+    nodes.push({shape: "circle", color: "red", id: id, label: this.getTypeNewline()});
+    this.counter++;
+    for(var i in this.children){
+      this.getGraphicRec(this.children[i],nodes,edges,id);
+    }
+
+    var result = [];
+    result.push(nodes);
+    result.push(edges);
+
+
+    console.log(nodes);
+    console.log(edges);
+
+    return result;
+
+  }
+
+  getGraphicRec(child, nodes,edges,index){
+    var id = this.counter;
+    nodes.push({id: id, label: child.getTypeNewline()});
+    this.counter++;
+    edges.push({from: index, to: id});
+
+    if(!child.children || child.children.length == 0){
+      return;
+    }else{
+      for(var i in child.children){
+        this.getGraphicRec(child.children[i],nodes,edges,id);
+      }
+    }
+    
+  }
+
   
 
-}
+  }

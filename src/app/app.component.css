@@ -22,3 +22,9 @@ body {
   .cb{
     margin-left: 10px;
   }
+
+  #mynetwork {
+    width: 1500px;
+    height: 1000px;
+    border: 1px solid lightgray;
+}

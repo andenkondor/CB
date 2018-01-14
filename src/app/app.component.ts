@@ -4,7 +4,7 @@ import { ParserService } from './services/parser.service';
 import { ASTNode } from './Models/ASTNode'
 import { SemanticAnalyzerService } from './services/semanticAnalyzer.service';
 import { JSONMapperService } from './services/JSONMapper.service';
-
+import { DataSet, Network } from 'vis';
 
 @Component({
   selector: 'app-root',
@@ -73,6 +73,42 @@ export class AppComponent {
 
   }
 
+  drawGraphicalTree(tree:ASTNode){
+    if(!this.showGraphicAST){
+      return;
+    }
+    var nodesArray = [];
+    var edgesArray = [];
+
+    var result = tree.getGraphic(nodesArray,edgesArray);
+    
+    var nodes = new DataSet(result[0]);
+    var edges = new DataSet(result[1]);
+
+
+    var container = document.getElementById('mynetwork');
+    var data = {
+      nodes: nodes,
+      edges: edges
+    };
+    var options = {
+      layout: {
+        improvedLayout: true,
+          hierarchical: {
+              direction: "UD",
+              nodeSpacing: 200
+          }
+      },
+      edges: {
+        arrows: {
+          to:true
+        }
+      }
+  };
+    var network = new Network(container, data, options);
+    
+  }
+
 
   
 
@@ -118,6 +154,7 @@ export class AppComponent {
     if (result[1] === "success") {
       this.appendConsole(afterParsingTime + "s - Parsing succeeded!");
       var tree: ASTNode = result[0];
+      this.drawGraphicalTree(tree);
       if (this.showAST) {
         this.appendConsole("AST:");
         this.appendConsole(tree.draw());
