@@ -3,6 +3,7 @@ import { LexerService } from './services/lexer.service';
 import { ParserService } from './services/parser.service';
 import { ASTNode } from './Models/ASTNode'
 import { SemanticAnalyzerService } from './services/semanticAnalyzer.service';
+import { JSONMapperService } from './services/JSONMapper.service';
 
 
 @Component({
@@ -21,8 +22,10 @@ export class AppComponent {
   tokenAutoFix = false;
   lookaheadSize = 3;
   showAST = true;
+  showGraphicAST = true;
 
-  constructor(public lexerService: LexerService, public parserService: ParserService, public semanticAnalyzerService:SemanticAnalyzerService) { }
+  constructor(public lexerService: LexerService, public parserService: ParserService, public semanticAnalyzerService:SemanticAnalyzerService,
+    public JSONMapperService: JSONMapperService) { }
 
 
 
@@ -39,9 +42,9 @@ export class AppComponent {
       disabled = true;
     }
 
+    
     return disabled;
   }
-
 
 
   convert() {
@@ -49,20 +52,29 @@ export class AppComponent {
     this.targetText = "";
     var startTime = new Date();
     var tokens = this.lexing(startTime);
-    console.log(tokens);
     if (tokens) {
       var tree = this.parsing(startTime, tokens);
 
       if(tree){
         var result = this.analyzing(startTime, tree);
       }
+
+      if(result){
+        var JSONtext = this.mapping(startTime,tree);
+        if(JSONtext){
+          this.targetText = JSONtext;
+        }
+
+      }
     }
 
 
-    console.log("tree");
 
 
   }
+
+
+  
 
   lexing(startTime) {
     this.appendConsole("0.000s - Start Lexing ...");
@@ -161,6 +173,22 @@ export class AppComponent {
       return null;
 
     }
+  }
+
+
+  mapping(startTime,tree){
+    var mappingTime = new Date().getMilliseconds() - startTime.getMilliseconds();
+    mappingTime /= 1000;
+
+    this.appendConsole(mappingTime + "s - Starting Mapping to JSON ...");
+    this.JSONMapperService.initialize(tree);
+    var result = this.JSONMapperService.map();
+    var afterMappingTime = new Date().getMilliseconds() - startTime.getMilliseconds();
+    afterMappingTime /=1000;
+    this.appendConsole(afterMappingTime + "s - Mapping to JSON succeeded!");
+    return result;
+    
+
   }
 
   appendConsole(text) {

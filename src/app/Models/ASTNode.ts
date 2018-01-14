@@ -15,14 +15,12 @@ export class ASTNode {
 
 
 
-
   addChild(node: ASTNode) {
     this.children.push(node);
   }
 
 
   draw() {
-    
     this.tree = this.getType();
     for (var child in this.children) {
       this.drawLevel(this.children[child], 1);

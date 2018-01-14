@@ -738,7 +738,7 @@ export class ParserService {
 
 
     keyType(node: ASTNode) {
-        var keyTypeNode: ASTNode = new ASTNode("keType", "");
+        var keyTypeNode: ASTNode = new ASTNode("keyType", "");
 
         var nextToken = this.getLookaheadToken(1);
         switch (nextToken.name) {

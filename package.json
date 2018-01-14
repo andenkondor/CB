@@ -23,8 +23,11 @@
     "@angular/router": "^5.0.0",
     "bootstrap": "^4.0.0-beta.2",
     "core-js": "^2.4.1",
+    "graphdracula": "^1.2.0",
     "popper.js": "^1.12.9",
+    "raphael": "^2.2.7",
     "rxjs": "^5.5.2",
+    "vis": "^4.21.0",
     "zone.js": "^0.8.14"
   },
   "devDependencies": {
