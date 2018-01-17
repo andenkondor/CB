@@ -100,6 +100,8 @@ export class LexerService {
     reset(){
 
     }
+    //Setze alle Einstellungen auf Anfang zurück, sodass
+    //neuer String gelext werden kann
     initialize(src,tokenAutoFix) {
         this.tokenAutoFix = tokenAutoFix;        
         this.src = src;
@@ -108,19 +110,24 @@ export class LexerService {
         this.currentIndex = 1;
         this.currentLine = 1;
     }
-
+    
+    //Beschaffe alle Token
     getTokens() {
         do {
             var token = this.getNextToken()
             this.filterToken(token);
+        //Solange bis Ende der Datei erreicht
         } while (token.name != "EOF");
         //this.tokens.pop();
+        //Setze Position für EOF manuell
         this.tokens[this.tokens.length-1].line = this.currentLine;
         this.tokens[this.tokens.length-1].index = 1;
         
         var result = [];
         result.push(this.tokens);
-
+        
+        //Falls kompletter SrcText weg ist,
+        //muss Lexing erfolgreich gewesen sein
         if (this.src === "") {
             result.push("success");
         } else {
@@ -130,6 +137,10 @@ export class LexerService {
             var errorIndex = 0;
             var initialLines = this.initialSrc.split("\n");
             var remainingLines = this.src.split("\n");
+            //Falls noch Text übrig bzw. nicht erfolgreich
+            //Suche erstes Vorkommen des restlichen Textes
+            //in initialem Text, sodass Zeile und Index
+            //des nicht passenden Tokens angezeigt werden können
             initialLines.forEach(function(line,number){
                 if(line.indexOf(remainingLines[0]) != -1){
                     errorLine = number+1;
@@ -144,7 +155,8 @@ export class LexerService {
 
         return result;
     }
-
+    
+    //Entferne alle gro0geschriebenen Token
     filterToken(token) {
         if (!(token.name[0] === token.name[0].toLowerCase() &&
             token.name[token.name.length - 1] === token.name[token.name.length - 1].toUpperCase())) {
@@ -156,14 +168,20 @@ export class LexerService {
             }
         }
     }
+    
+    //Beschaffe nächstes Token
     getNextToken() {
 
         var longest = 0;
         var name = "";
         var value = "";
+        //Erstelle für jede mögliche Parser-Regel Regex
         for (var i in this.lexerGrammar) {
             var regex = new RegExp("^" + this.lexerGrammar[i]);
             var result = this.src.match(regex);
+            //Falls Regex auf ANFANG der Source passt:
+            //Merke dir die Länge des Matches, Namen der Regel
+            //und gematchten String
             if (result) {
                 if (result[0].length > longest) {
                     longest = result[0].length;
@@ -173,6 +191,7 @@ export class LexerService {
             }
         }
         var next = new Token("", "");
+        //Falls ich mind. einen Match gefunden habe
         if (longest > 0) {
             next.name = name;
             next.line = this.currentLine;
