@@ -73,7 +73,6 @@ export class ParserService {
     }
 
     match(tokenName, node: ASTNode) {
-        console.log("hab ich " + this.getLookaheadToken(1).name + ". muss ich: " + tokenName);
         if (this.getLookaheadToken(1).name === tokenName) {
 
             var tokenNode: ASTNode = new ASTNode("", tokenName);
