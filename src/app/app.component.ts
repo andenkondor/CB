@@ -20,7 +20,7 @@ export class AppComponent {
   consoleText = "";
   showTokens = true;
   tokenAutoFix = false;
-  lookaheadSize = 3;
+  lookaheadSize = 2;
   showAST = true;
   showGraphicAST = true;
 
