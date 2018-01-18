@@ -30,13 +30,19 @@ export class ParserService {
         this.lookahead = this.ringbuffer.length;
 
     }
-
+    //Konsumiere nächstes Token aus Ringbuffer
     consume() {
+        //Falls noch Token außerhalb des Ringbuffers vorhanden:
+        //Befülle den Ringbuffer mit einem neuen Element aus der Tokenliste
+        //und lösche aktuelles Element
         if (this.tokensLeft()) {
             this.ringbuffer[this.position] = this.tokens[0];
             this.tokens.shift();
             this.position = (this.position + 1) % this.lookahead;
         } else {
+            //Falls keine Elemente mehr in Tokenliste
+            //Lösche aktuelles Element aus Ringbuffer
+            //und verringere Ringbuffer-Größe um eins
             if (this.ringbuffer.length >= 1) {
                 if (this.position == this.lookahead - 1) {
                     this.position = 0
@@ -45,6 +51,8 @@ export class ParserService {
                     this.ringbuffer.splice(this.position, 1);
                 }
                 this.lookahead--;
+              //Falls mein Ringbuffer komplett leer ist,
+              //liefere Fehler zurück
             } else if (this.ringbuffer.length == 0) {
                 var emptyToken: Token = new Token("NULL", "");
                 return emptyToken;
