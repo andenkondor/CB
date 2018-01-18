@@ -56,7 +56,6 @@ export class ParserService {
             } else if (this.ringbuffer.length == 0) {
                 var emptyToken: Token = new Token("NULL", "");
                 return emptyToken;
-
             }
         }
     }
