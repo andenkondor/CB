@@ -130,7 +130,6 @@ export class ASTNode {
   getGraphic(nodes, edges) {
 
     var id = this.counter;
-    console.log(this.getType());
     nodes.push({ shape: "circle", color: "red", id: id, label: this.getTypeNewline() });
     this.counter++;
     for (var i in this.children) {
@@ -140,10 +139,6 @@ export class ASTNode {
     var result = [];
     result.push(nodes);
     result.push(edges);
-
-
-    console.log(nodes);
-    console.log(edges);
 
     return result;
 

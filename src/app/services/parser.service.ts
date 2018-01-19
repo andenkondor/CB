@@ -67,13 +67,15 @@ export class ParserService {
 
     //Beschaffe Lookahead-Token, falls Token vorhanden. Sonst Null-Token
     getLookaheadToken(lookahead) {
-        if (lookahead > this.lookahead) {
+        if (lookahead <= this.lookahead) {
             if (this.lookaheadLeft()) {
                 return this.ringbuffer[(this.position + lookahead - 1) % this.lookahead];
             } else {
                 var emptyToken: Token = new Token("NULL", "");
                 return emptyToken;
             }
+        }else{
+            throw { name: "LookAheadTooHigh", message: "The maximal LookAhead can be"+this.lookahead };
         }
 
     }
@@ -164,19 +166,14 @@ export class ParserService {
                 backup_tokens = this.tokens.slice();
                 backup_lookahead = this.lookahead;
                 if (this.spec_import()) {
-                    console.log("im");
                     this.import(node);
                 } else if (this.spec_package()) {
-                    console.log("pack");
                     this.package(node);
                 } else if (this.spec_option()) {
-                    console.log("opt");
                     this.option(node);
                 } else if (this.spec_toplevel()) {
-                    console.log("top");
                     this.toplevel(node);
                 } else {
-                    console.log("emp");
                     this.empty(node);
                 }
 
