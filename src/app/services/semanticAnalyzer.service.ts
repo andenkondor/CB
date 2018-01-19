@@ -177,8 +177,8 @@ export class SemanticAnalyzerService {
                 scopes.addChild(newScope);
                 newScope.name = "enumScope";
                 this.getScope(tree.children[child], newScope);
-                //Irrelevanter Regelknoten:
-                //Fahre rekursiv fort
+              //Falls kein Scope-relevanter Regel-Knoten:
+              //Führe Prozedur rekursiv für seine Kinder aus
             } else if (tree.children[child].rule != "") {
                 this.getScope(tree.children[child], scopes);
             }

@@ -45,7 +45,9 @@ export class ParserService {
         
         //Tokenliste leer
         } else {
-            //Eliminiere Token und verringer Ringpuffer-Länge um 1
+            //Falls keine Elemente mehr in Tokenliste
+            //Lösche aktuelles Element aus Ringbuffer
+            //und verringere Ringbuffer-Größe um eins
             if (this.ringbuffer.length >= 1) {
                 if (this.position == this.lookahead - 1) {
                     this.position = 0
@@ -59,7 +61,6 @@ export class ParserService {
             } else if (this.ringbuffer.length == 0) {
                 var emptyToken: Token = new Token("NULL", "");
                 return emptyToken;
-
             }
         }
     }
