@@ -10,16 +10,17 @@ export class JSONMapperService {
     level = 0;
 
 
+    //Alles auf Anfang stellen
     initialize(tree) {
         this.tree = tree;
         this.errors = [];
         this.JSONtext = "{";
         this.level = 0;
-
     }
 
 
-
+    //Start-Methode
+    //Einrücken und rekursiv durch Baum iterieren
     map() {
         this.level++;
         this.recursiveDescent(this.tree);
@@ -31,7 +32,8 @@ export class JSONMapperService {
         return this.JSONtext;
     }
 
-
+    //Iteriere durch Baum
+    //Je nach gefundener Regel, rufe passende Übersetzungsfunktion auf
     recursiveDescent(node:ASTNode){
 
         for(var child in node.children){
@@ -50,7 +52,7 @@ export class JSONMapperService {
     }
 
 
-
+    //Mappe ein Message in JSON-Text
     mapMessage(node:ASTNode){
         if(this.JSONtext[this.JSONtext.length-1] === " "){
             this.JSONtext = this.JSONtext.substring(0, this.JSONtext.length-1) + "," + this.JSONtext.substring(this.JSONtext.length);                
@@ -65,7 +67,7 @@ export class JSONMapperService {
         this.setTabs(this.level);
         this.JSONtext += "} ";
     }
-
+    //Mappe ein Field in JSON-Text
     mapField(node:ASTNode){
         if(this.JSONtext[this.JSONtext.length-1] === " "){
             this.JSONtext = this.JSONtext.substring(0, this.JSONtext.length-1) + "," + this.JSONtext.substring(this.JSONtext.length);                
@@ -82,7 +84,7 @@ export class JSONMapperService {
             this.JSONtext += " ";
         }
     }
-
+    //Mappe einen Typ in JSON-Text
     mapType(node:ASTNode){
         if(node.children[0].token === "FLOAT" ||
            node.children[0].token === "DOUBLE"){
@@ -118,7 +120,7 @@ export class JSONMapperService {
 
 
 
-
+    //Mappe eine Enum in JSON-Text
     mapEnum(node:ASTNode){
         if(this.JSONtext[this.JSONtext.length-1] === " "){
             this.JSONtext = this.JSONtext.substring(0, this.JSONtext.length-1) + "," + this.JSONtext.substring(this.JSONtext.length);                
@@ -128,7 +130,7 @@ export class JSONMapperService {
         this.enumFields(node.children[2]);        
         }
 
-
+    //Mappe ein enumField in JSON-Text
     enumFields(node:ASTNode){
         this.JSONtext += "[";
         for(var i in node.children){
@@ -140,7 +142,7 @@ export class JSONMapperService {
         this.JSONtext += "] ";
         
     }
-
+    //Mappe eine Map in JSON-Text
     mapMap(node:ASTNode){
 
         if(this.JSONtext[this.JSONtext.length-1] === " "){
@@ -167,7 +169,7 @@ export class JSONMapperService {
 
     }
 
-
+    
     setTabs(count){
         this.JSONtext += "\n";
         for(var i = 0; i< count;i++){

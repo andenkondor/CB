@@ -14,9 +14,10 @@ export class SemanticAnalyzerService {
     }
 
 
-
+    //Rufe alle Regeln hintereinander auf
+    //Konkateniere ihre Fehlermeldungen
     analyze() {
-        this.errors = this.errors.concat(this.scopeUnknownTypes());        
+        this.errors = this.errors.concat(this.scopeUnknownTypes());
         this.errors = this.errors.concat(this.enumTagRange());
         this.errors = this.errors.concat(this.enumStartswithZero());
         this.errors = this.errors.concat(this.messageUniqueTagsAnalyzation());
@@ -27,9 +28,10 @@ export class SemanticAnalyzerService {
 
 
 
-
+        //Mind. eine Fehlermeldung vorhanden
         if (this.errors.length > 0) {
             this.errors.unshift("failure");
+            //Keine Fehlermeldung
         } else {
             this.errors.unshift("success");
         }
@@ -42,15 +44,16 @@ export class SemanticAnalyzerService {
     scopeUnknownTypes() {
         var scope = new ScopeNode();
         scope.name = "start";
+        //Initialisiere Scope
         scope = this.getScope(this.tree, scope);
         var errorMessages = [];
         var allScopes = [];
         allScopes = scope.treeAsList(scope);
 
 
-
-        for(var idx in allScopes){
-            errorMessages = errorMessages.concat(this.lookForTypes(allScopes[idx],allScopes[idx].typeNodes));
+        //Für jeden Scope
+        for (var idx in allScopes) {
+            errorMessages = errorMessages.concat(this.lookForTypes(allScopes[idx], allScopes[idx].typeNodes));
         }
 
         return errorMessages;
@@ -58,34 +61,46 @@ export class SemanticAnalyzerService {
 
     }
 
+    //Prüfe rekursiv, ob alle Typen eines Arrays in einem Scope
+    //oder den darüberliegenden Scopes definiert wurden
+    //Gehe dabei nur baumaufwärts
+    lookForTypes(scope: ScopeNode, types) {
 
-    lookForTypes(scope: ScopeNode, types){
-
+        //Für jeden Typ im Array
         for (var i = types.length - 1; i >= 0; i--) {
-            for(var identifier in scope.nameNodes){
-                if(types[i].value === scope.nameNodes[identifier].value){
-                    types.splice(i,1);
+            //Jeden Bezeichner im Scope
+            for (var identifier in scope.nameNodes) {
+                //Falls ein Typ mit einem Bezeichner übereinstimmt
+                if (types[i].value === scope.nameNodes[identifier].value) {
+                    //Typ muss nicht mehr gesucht werden
+                    //Lösche Typ aus Array
+                    types.splice(i, 1);
                     break;
                 }
             }
         }
 
-        if(types && types.length > 0 && !scope.parent){
+        //Falls ich noch Bezeichner für Typen finden muss, aber schon in der Wurzel angekommen bin:
+        //Fehlermeldung
+        if (types && types.length > 0 && !scope.parent) {
             var errorMessages = [];
-            for(var type in types){
-                errorMessages.push("Cannot resolve Type "+types[type].value+" at line "+types[type].line+" and index "+types[type].index);
+            for (var type in types) {
+                errorMessages.push("Cannot resolve Type " + types[type].value + " at line " + types[type].line + " and index " + types[type].index);
             }
             return errorMessages;
 
-        }else if(!types || types.length == 0){
+            //Falls ich alles Typen über Bezeichner finden konnte:
+        } else if (!types || types.length == 0) {
             return [];
-            
-        }else{
-            return this.lookForTypes(scope.parent,types);
+
+            //Falls ich noch Bezeichner für Typen auffinden muss und es noch einen höhergelegeneren Scope gibt:
+            //Schaue rekursiv in diesem Scope nach Bezeichnern für meine Typen
+        } else {
+            return this.lookForTypes(scope.parent, types);
         }
 
     }
-    //Sucht nach doppelten Identifiern innerhalb eines Scopes
+    //Sucht nach rekursiv doppelten Identifiern innerhalb eines Scopes
     scopeDoubleIdentifiers(init, scope: ScopeNode) {
         if (init) {
             scope = new ScopeNode();
@@ -94,15 +109,22 @@ export class SemanticAnalyzerService {
         }
         var errormessages = [];
         var identifiers = [];
+
+        //Für jeden einzelnen Scope:
+        //Merke mir alle Bezeichner
         for (var token in scope.nameNodes) {
             if (scope.nameNodes[token].token === "Identifier") {
                 identifiers.push(scope.nameNodes[token]);
             }
         }
 
+        //Mehr als ein Bezeichner in Scope:
+        //Prüfe, pb Duplikate
         if (identifiers.length > 1) {
             identifiers = this.check_duplicateTokens(identifiers);
 
+            //Für jedes Duplikat:
+            //Erstelle Fehlermeldung
             for (var i = 0; i < identifiers.length; i++) {
                 errormessages.push("Duplicate identifier '" +
                     identifiers[i].value + "' in lines " + identifiers[i].line + " and " + identifiers[i + 1].line);
@@ -111,41 +133,52 @@ export class SemanticAnalyzerService {
         }
 
 
-
+        //Führe dieselbe Routine für alle meine Kinder aus
         for (var child in scope.children) {
             errormessages = errormessages.concat(this.scopeDoubleIdentifiers(false, scope.children[child]));
         }
-
-
 
         return errormessages;
 
 
     }
 
-
+    //Beschaffe mir rekursiv die Scopes in meinem Parse-Tree
     getScope(tree: ASTNode, scopes: ScopeNode) {
 
+        //Für jeden Knoten
         for (var child in tree.children) {
+            //Stellt Knoten Bezeichner dar:
+            //Speichere ihn für aktuellen Scope in Bezeichnerliste
             if (tree.children[child].rule === "enumName" ||
                 tree.children[child].rule === "messageName" ||
                 tree.children[child].rule === "fieldName" ||
                 tree.children[child].rule === "enumFieldName") {
                 scopes.nameNodes.push(tree.children[child].children[0]);
-            } else if(tree.children[child].rule === "messageOrEnumType"){
+                //Stellt Knoten Typ dar:
+                //Speichere ihn für aktuellen Scope in Typenliste
+            } else if (tree.children[child].rule === "messageOrEnumType") {
                 scopes.typeNodes.push(tree.children[child].children[0]);
+                //Wird neuer MessageScope aufgemacht:
+                //Erstelle neuen ScopeNode und hänge ihn ein
+                //Fahre dann rekursiv fort
             } else if (tree.children[child].rule === "messageBody") {
                 var newScope: ScopeNode = new ScopeNode();
                 newScope.addParent(scopes);
                 scopes.addChild(newScope);
                 newScope.name = "messageScope";
                 this.getScope(tree.children[child], newScope);
+                //Wird neuer EnumScope aufgemacht:
+                //Erstelle neuen ScopeNode und hänge ihn ein
+                //Fahre dann rekursiv fort
             } else if (tree.children[child].rule === "enumBody") {
                 var newScope: ScopeNode = new ScopeNode();
                 newScope.addParent(scopes);
                 scopes.addChild(newScope);
                 newScope.name = "enumScope";
                 this.getScope(tree.children[child], newScope);
+                //Irrelevanter Regelknoten:
+                //Fahre rekursiv fort
             } else if (tree.children[child].rule != "") {
                 this.getScope(tree.children[child], scopes);
             }
@@ -189,12 +222,14 @@ export class SemanticAnalyzerService {
 
                 if (bodyNodes[idx].children[child].rule === "enumField") {
                     if (bodyNodes[idx].children[child].children[2].rule === "enumFieldTag") {
+                        //Falls 1. Tag nicht mit 0 startet
                         if (bodyNodes[idx].children[child].children[2].children[0].value != 0) {
                             errorMessages.push("First Field Tag '" + bodyNodes[idx].children[child].children[2].children[0].value + "' in Enum in line " +
                                 bodyNodes[idx].children[child].children[2].children[0].line + " and at index " + bodyNodes[idx].children[child].children[2].children[0].index +
                                 " does not equal zero.");
 
                         }
+                        //Falls 1. Tag nicht mit 0 startet
                     } else if (bodyNodes[idx].children[child].children[3].children[0].value != 0) {
                         errorMessages.push("First Field Tag '" + bodyNodes[idx].children[child].children[3].children[0].value + "' in Enum in line " +
                             bodyNodes[idx].children[child].children[3].children[0].line + " and at index " + bodyNodes[idx].children[child].children[3].children[0].index +
@@ -249,6 +284,7 @@ export class SemanticAnalyzerService {
 
                 if (bodyNodes[idx].children[child].rule === "enumField") {
                     if (bodyNodes[idx].children[child].children[2].rule === "enumFieldTag") {
+                        //Falls Tag nicht in korrekter Range
                         if (bodyNodes[idx].children[child].children[2].children[0].value > 4294967295 ||
                             bodyNodes[idx].children[child].children[2].children[0].value < 0) {
                             errorMessages.push("Field Tag '" + bodyNodes[idx].children[child].children[2].children[0].value + "' in Enum in line " +
@@ -257,16 +293,17 @@ export class SemanticAnalyzerService {
 
                         }
                     } else {
-                     if (bodyNodes[idx].children[child].children[3].children[0].value > 4294967295 ||
-                        bodyNodes[idx].children[child].children[3].children[0].value < 0) {
-                        errorMessages.push("Field Tag '" + bodyNodes[idx].children[child].children[3].children[0].value + "' in Enum in line " +
-                            bodyNodes[idx].children[child].children[3].children[0].line + " and at index " + bodyNodes[idx].children[child].children[3].children[0].index +
-                            " is out of range (0-4294967295).");
+                        //Falls Tag nicht in korrekter Range
+                        if (bodyNodes[idx].children[child].children[3].children[0].value > 4294967295 ||
+                            bodyNodes[idx].children[child].children[3].children[0].value < 0) {
+                            errorMessages.push("Field Tag '" + bodyNodes[idx].children[child].children[3].children[0].value + "' in Enum in line " +
+                                bodyNodes[idx].children[child].children[3].children[0].line + " and at index " + bodyNodes[idx].children[child].children[3].children[0].index +
+                                " is out of range (0-4294967295).");
+
+                        }
+
 
                     }
-
-
-                }
 
                 }
             }
@@ -323,11 +360,14 @@ export class SemanticAnalyzerService {
                 }
 
             }
+            //Falls mehr als ein Tag gefunden:
+            //Prüfe, ob Duplikate
             if (tagNumbers.length > 1) {
                 duplicateTags = duplicateTags.concat(this.check_duplicateTokens(tagNumbers));
             }
 
         }
+        //Für jedes Duplikat Fehlermeldung
         for (var i = 0; i < duplicateTags.length; i++) {
             errorMessages.push("Duplicate enum tag '" +
                 duplicateTags[i].value + "' in lines " + duplicateTags[i].line + " and " + duplicateTags[i + 1].line);
@@ -378,8 +418,10 @@ export class SemanticAnalyzerService {
                     //Pro FieldNode alle Kinder
                     if (fieldNodes[message][fieldNode].children[names].rule === "fieldNumber") {
                         var tagToken = fieldNodes[message][fieldNode].children[names].children[0];
+                        //Tag außerhalb von Range
                         if (tagToken.value < 1 || tagToken.value > 536870911) {
                             errorMessages.push("Message Field Tag '" + tagToken.value + "' in line " + tagToken.line + " and at index " + tagToken.index + " is out of range (1-536870911).");
+                            //Tag in reservierter Range
                         } else if (tagToken.value >= 19000 || tagToken.value > 19999) {
                             errorMessages.push("Message Field Tag '" + tagToken.value + "' in line " + tagToken.line + " and at index " + tagToken.index + " is in reserved range (19000-19999).");
                         }
@@ -455,63 +497,9 @@ export class SemanticAnalyzerService {
 
 
 
-    /*messageUniqueIdentifierAnalyzation() {
-
-        var allNodes = [];
-        allNodes = this.tree.treeAsList(this.tree);
-        var messageNodes = [];
-        var fieldNodes = [];
-        var duplicateFieldNameTokens = [];
-        var errorMessages = [];
-
-        for (var node in allNodes) {
-            //Alle existierenden Nodes
-            if (allNodes[node].rule === "messageBody") {
-                //Alle Node, die messageBody sind
-                messageNodes.push(allNodes[node]);
-                fieldNodes.push([]);
-            }
-        }
-
-        for (var node in messageNodes) {
-            //Alle Nodes, die MessageBody sind
-            for (var childNode in messageNodes[node].children) {
-                //Alle direkten Kinder der MessageBodies
-                if (messageNodes[node].children[childNode].rule === "field") {
-                    //Alle direkten Kinder der MessageBodies, die Field sind
-                    fieldNodes[node].push(messageNodes[node].children[childNode]);
-                }
-            }
-        }
-
-        for (var message in fieldNodes) {
-            //Für alle gespeicherten MessageBodies
-            var fieldNames = [];
-            for (var fieldNode in fieldNodes[message]) {
-                //Pro MessageBody alle FieldNodes            
-                for (var names in fieldNodes[message][fieldNode].children) {
-                    //Pro FieldNode alle Kinder
-                    if (fieldNodes[message][fieldNode].children[names].rule === "fieldName") {
-                        //Falls ein FieldNode Kind ein FieldName ist
-                        fieldNames.push(fieldNodes[message][fieldNode].children[names].children[0]);
-                    }
-                }
-
-            }
-            if (fieldNames.length > 1) {
-                duplicateFieldNameTokens = duplicateFieldNameTokens.concat(this.check_duplicateTokens(fieldNames));
-            }
-        }
-        for (var i = 0; i < duplicateFieldNameTokens.length; i++) {
-            errorMessages.push("Duplicate message field identifier '" +
-                duplicateFieldNameTokens[i].value + "' in lines " + duplicateFieldNameTokens[i].line + " and " + duplicateFieldNameTokens[i + 1].line);
-            i++;
-        }
-
-        return errorMessages;
-    }*/
 
 
+    //Finde Duplikate in Array durch Ordnen der Werte
     check_duplicateTokens(tokenList) {
         tokenList.sort(function (a, b) {
             return a.value.localeCompare(b.value);

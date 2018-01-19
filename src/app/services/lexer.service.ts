@@ -10,6 +10,8 @@ export class LexerService {
     currentLine = 1;
     currentIndex = 1;
 
+
+    //Fragmente, dienen als Grundlage für Lexer-Grammatik
     fragLetter: string = "[A-Za-z_]";
     fragDecimalDigit: string = "[0-9]";
     fragOctalDigit: string = "[0-7]";
@@ -22,10 +24,14 @@ export class LexerService {
     fragHexEscape = "\\\\(x|X)" + this.fragHexDigit + "{2}"
     fragOctalEscape = "\\\\" + this.fragOctalDigit + "{3}";
     fragCharEscape = "\\\\[abfnrtv\\'\"]";
-    fragCharValue = "("+this.fragHexEscape + "|" + this.fragOctalEscape + "|" + this.fragCharEscape + "|[^\\0\\n\\\\])";
+    fragCharValue = "(" + this.fragHexEscape + "|" + this.fragOctalEscape + "|" + this.fragCharEscape + "|[^\\0\\n\\\\])";
 
 
-
+    //LexerGrammatik
+    //Reihenfolge der Regeln bestimmt Priorität (absteigend)
+    //GROSS --> Schlüsselwort
+    //Anfanggroß --> Bezeichner, Integer, etc.
+    //aNFANGKLEIN --> Unwichtige Token: Whitespace, etc.
     lexerGrammar = {
         BOOL: "bool",
         BYTES: "bytes",
@@ -66,7 +72,7 @@ export class LexerService {
         UINT64: "uint64",
         WEAK: "weak",
 
-        Identifier: "("+this.fragLetter + "(" + this.fragLetter + "|" + this.fragDecimalDigit + ")*)",
+        Identifier: "(" + this.fragLetter + "(" + this.fragLetter + "|" + this.fragDecimalDigit + ")*)",
         IntegerLiteral: "((" + this.fragDecimalLiteral + ")|(" + this.fragOctalLiteral + ")|(" + this.fragHexLiteral + "))",
         FloatLiteral: "((" + this.fragDecimals + "\\.(" + this.fragDecimals + ")?" + this.fragExponent + "?|" + this.fragDecimals + this.fragExponent + "|\\." + this.fragDecimals + "?)|inf|nan)",
         StringLiteral: "(('" + this.fragCharValue + "*')|(\"" + this.fragCharValue + "*\"))",
@@ -97,35 +103,35 @@ export class LexerService {
     constructor() {
     }
 
-    reset(){
+    reset() {
 
     }
     //Setze alle Einstellungen auf Anfang zurück, sodass
     //neuer String gelext werden kann
-    initialize(src,tokenAutoFix) {
-        this.tokenAutoFix = tokenAutoFix;        
+    initialize(src, tokenAutoFix) {
+        this.tokenAutoFix = tokenAutoFix;
         this.src = src;
         this.initialSrc = src;
         this.tokens = [];
         this.currentIndex = 1;
         this.currentLine = 1;
     }
-    
+
     //Beschaffe alle Token
     getTokens() {
         do {
             var token = this.getNextToken()
             this.filterToken(token);
-        //Solange bis Ende der Datei erreicht
+            //Solange bis Ende der Datei erreicht
         } while (token.name != "EOF");
         //this.tokens.pop();
         //Setze Position für EOF manuell
-        this.tokens[this.tokens.length-1].line = this.currentLine;
-        this.tokens[this.tokens.length-1].index = 1;
-        
+        this.tokens[this.tokens.length - 1].line = this.currentLine;
+        this.tokens[this.tokens.length - 1].index = 1;
+
         var result = [];
         result.push(this.tokens);
-        
+
         //Falls kompletter SrcText weg ist,
         //muss Lexing erfolgreich gewesen sein
         if (this.src === "") {
@@ -141,11 +147,11 @@ export class LexerService {
             //Suche erstes Vorkommen des restlichen Textes
             //in initialem Text, sodass Zeile und Index
             //des nicht passenden Tokens angezeigt werden können
-            initialLines.forEach(function(line,number){
-                if(line.indexOf(remainingLines[0]) != -1){
-                    errorLine = number+1;
-                    errorIndex = line.indexOf(remainingLines[0])+1;
-                    result[2] = line.substr(0, errorIndex-1) + "[ERROR->]" + line.substr(errorIndex-1);
+            initialLines.forEach(function (line, number) {
+                if (line.indexOf(remainingLines[0]) != -1) {
+                    errorLine = number + 1;
+                    errorIndex = line.indexOf(remainingLines[0]) + 1;
+                    result[2] = line.substr(0, errorIndex - 1) + "[ERROR->]" + line.substr(errorIndex - 1);
                     return;
                 }
             })
@@ -155,20 +161,20 @@ export class LexerService {
 
         return result;
     }
-    
-    //Entferne alle gro0geschriebenen Token
+
+    //Entferne alle unwichtigen Token
     filterToken(token) {
         if (!(token.name[0] === token.name[0].toLowerCase() &&
             token.name[token.name.length - 1] === token.name[token.name.length - 1].toUpperCase())) {
             this.tokens.push(token);
-        }else{
-            if(token.name === "nEWLINE"){
+        } else {
+            if (token.name === "nEWLINE") {
                 this.currentLine++;
                 this.currentIndex = 1;
             }
         }
     }
-    
+
     //Beschaffe nächstes Token
     getNextToken() {
 

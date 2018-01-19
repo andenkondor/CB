@@ -10,15 +10,18 @@ export class ParserService {
     lastErrorInformation = [];
     tokenSizeHistory;
 
+    //Setze alle Einstellungen auf Anfang zurück
     initialize(tokens, lookahead) {
         this.ringbuffer = [];
         this.tokens = tokens;
         this.lookahead = lookahead;
         this.position = 0;
 
+        //Keine Token zum Verarbeiten
         if (this.tokens.length < 1) {
             throw { name: "NoTokensLeftError", message: "No Tokens for Parsing supplied" };
         }
+        //Fülle Ringpuffer mit Token auf bis Lookahead erreicht
         for (var i = 0; i < this.lookahead; i++) {
             if (this.tokensLeft()) {
                 this.ringbuffer.push(this.tokens[0]);
@@ -31,12 +34,18 @@ export class ParserService {
 
     }
 
+    //Eliminiere aktuelles Token und lade nächstes Token nach
     consume() {
+        //Falls noch Token in Tokenliste
+        //Einfach nachfüllen
         if (this.tokensLeft()) {
             this.ringbuffer[this.position] = this.tokens[0];
             this.tokens.shift();
             this.position = (this.position + 1) % this.lookahead;
+        
+        //Tokenliste leer
         } else {
+            //Eliminiere Token und verringer Ringpuffer-Länge um 1
             if (this.ringbuffer.length >= 1) {
                 if (this.position == this.lookahead - 1) {
                     this.position = 0
@@ -45,6 +54,8 @@ export class ParserService {
                     this.ringbuffer.splice(this.position, 1);
                 }
                 this.lookahead--;
+            //Weder Token im Ringpuffer noch in Tokenliste
+            //Null-Token zurückliefern
             } else if (this.ringbuffer.length == 0) {
                 var emptyToken: Token = new Token("NULL", "");
                 return emptyToken;
@@ -54,31 +65,35 @@ export class ParserService {
     }
 
 
-
+    //Beschaffe Lookahead-Token, falls Token vorhanden. Sonst Null-Token
     getLookaheadToken(lookahead) {
-        if (this.lookaheadLeft()) {
-            return this.ringbuffer[(this.position + lookahead - 1) % this.lookahead];
-        } else {
-            var emptyToken: Token = new Token("NULL", "");
-            return emptyToken;
+        if (lookahead > this.lookahead) {
+            if (this.lookaheadLeft()) {
+                return this.ringbuffer[(this.position + lookahead - 1) % this.lookahead];
+            } else {
+                var emptyToken: Token = new Token("NULL", "");
+                return emptyToken;
+            }
         }
 
     }
 
+    //Prüfe, ob vorhandenes Token mit vorgegebenem übereinstimmt
     match(tokenName, node: ASTNode) {
-        console.log("hab ich " + this.getLookaheadToken(1).name + ". muss ich: " + tokenName);
+        //Übereinstimmung
         if (this.getLookaheadToken(1).name === tokenName) {
 
+            //Erstelle neuen Parse-Tree-Knoten und hänge diesen ein
             var tokenNode: ASTNode = new ASTNode("", tokenName);
             tokenNode.value = this.getLookaheadToken(1).value;
             tokenNode.line = this.getLookaheadToken(1).line;
             tokenNode.index = this.getLookaheadToken(1).index;
-            if (tokenNode.value != "") {
-                console.log("val:" + tokenNode.value);
-            }
             node.addChild(tokenNode);
             this.consume();
+        //Keine Übereinstimmung
         } else {
+            //Falls das am weitesten hinten liegende Token
+            //Speichere Token für Fehlermeldung
             if (this.tokens.length <= this.tokenSizeHistory) {
                 this.tokenSizeHistory = this.tokens.length;
                 this.lastErrorInformation = [];
@@ -90,6 +105,7 @@ export class ParserService {
         }
     }
 
+
     lookaheadLeft() {
         return (this.ringbuffer.length > 0);
     }
@@ -99,15 +115,18 @@ export class ParserService {
     }
 
 
-
+    //Starte Parsing mit leerem Knoten
+    
     parsing() {
         var result = [];
         var startNode: ASTNode = new ASTNode("start", "");
         try {
             this.protoStart(startNode);
+            //Parsing erfolgreich
             result.push(startNode);
             result.push("success");
         } catch (e) {
+            //Fehler: Parsing nicht erfolgreich
             console.log(e.name + ": " + e.message);
             if (e.name === "NoTokenMatchError") {
                 result.push("failure");
