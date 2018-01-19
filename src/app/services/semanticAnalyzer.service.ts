@@ -125,27 +125,39 @@ export class SemanticAnalyzerService {
 
 
     getScope(tree: ASTNode, scopes: ScopeNode) {
-
+        //Für jedes Kind des aktuellen AST-Knotens
         for (var child in tree.children) {
+            //Ist Kind ein Identifier:
+            //Speichere es für diesen Scope in Identifier-Liste ab
             if (tree.children[child].rule === "enumName" ||
                 tree.children[child].rule === "messageName" ||
                 tree.children[child].rule === "fieldName" ||
                 tree.children[child].rule === "enumFieldName") {
                 scopes.nameNodes.push(tree.children[child].children[0]);
+              //Ist Kind eine Typenbezeichnung:
+              //Speichere es in Typen-Liste ab
             } else if(tree.children[child].rule === "messageOrEnumType"){
                 scopes.typeNodes.push(tree.children[child].children[0]);
+              //Wird ein neuer Message-Scope aufgemacht:
+              //Hänge neuen Scope-Knoten ein
+              //und ermittle rekursiv für diesen die Sub-Scopes
             } else if (tree.children[child].rule === "messageBody") {
                 var newScope: ScopeNode = new ScopeNode();
                 newScope.addParent(scopes);
                 scopes.addChild(newScope);
                 newScope.name = "messageScope";
                 this.getScope(tree.children[child], newScope);
+              //Wird ein neuer Enum-Scope aufgemacht:
+              //Hänge neuen Scope-Knoten ein
+              //und ermittle rekursiv für diesen die Sub-Scopes
             } else if (tree.children[child].rule === "enumBody") {
                 var newScope: ScopeNode = new ScopeNode();
                 newScope.addParent(scopes);
                 scopes.addChild(newScope);
                 newScope.name = "enumScope";
                 this.getScope(tree.children[child], newScope);
+              //Falls kein Scope-relevanter Regel-Knoten:
+              //Führe Prozedur rekursiv für seine Kinder aus
             } else if (tree.children[child].rule != "") {
                 this.getScope(tree.children[child], scopes);
             }
